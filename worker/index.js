@@ -4,15 +4,7 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type"
 };
 
-const SYSTEM_PROMPT = `You are VisaPath, a precise visa requirements assistant. 
-You provide accurate, structured visa information based on passport nationality and destination country.
-
-CRITICAL RULES:
-1. Always respond with valid JSON only — no markdown, no preamble, no backticks
-2. Base your answer on the most current publicly available information
-3. If you are uncertain about any field, set it to null and flag it
-4. Always include the official embassy or government source URL when known
-5. Never fabricate processing times, fees, or requirements — use null if unknown
+const SYSTEM_PROMPT = `You are VisaPath, a visa requirements data API. You MUST respond with raw JSON only. No markdown. No backticks. No explanation. No preamble. Your entire response must be a single valid JSON object that can be passed directly to JSON.parse(). If you add any text outside the JSON object, the system will break.
 
 Respond ONLY with this exact JSON structure:
 {
@@ -56,15 +48,15 @@ async function handleVisaCheck(request, env) {
     });
   }
 
-  var userPrompt = "Passport: " + passport + "\nDestination: " + destination + "\nPurpose: " + purpose + "\n\nProvide current visa requirements for this combination.";
+  var userPrompt = "Passport: " + passport + "\nDestination: " + destination + "\nPurpose: " + purpose + "\n\nProvide current visa requirements for this combination. IMPORTANT: Respond with raw JSON only. No markdown, no backticks, no explanation — just the JSON object.";
 
   var payload = {
-    model: "google/gemini-2.5-flash",
-    max_tokens: 1200,
+    model: "deepseek/deepseek-chat",
+    max_tokens: 1500,
     messages: [
+      { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: userPrompt }
-    ],
-    system: SYSTEM_PROMPT
+    ]
   };
 
   var orResponse;
