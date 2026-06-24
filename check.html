@@ -207,6 +207,7 @@ select option { background: #1a2e42; color: var(--white); }
 .stat-val.cyan  { color: var(--cyan); }
 .stat-val.green { color: var(--green); }
 .stat-lbl { font-size: 11px; color: var(--mid-txt); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; }
+.stat-sub { font-size: 11px; color: var(--muted); margin-top: 3px; font-weight: 300; line-height: 1.4; }
 
 /* SECTION CARDS */
 .section-card { background: var(--white); border-radius: 16px; padding: 24px 28px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
@@ -436,17 +437,41 @@ function getStatusConfig(vr) {
 function safe(v, fb) { return (v !== null && v !== undefined) ? String(v) : (fb || "Unknown"); }
 
 function fmtDays(mn, mx) {
-  if (!mn && !mx) return "Unknown";
-  if (mn && mx && mn !== mx) return mn + "–" + mx + " days";
+  if (!mn && !mx) return null;
+  if (mn && mx && mn !== mx) return mn + "-" + mx + " days";
   return (mn || mx) + " days";
 }
 
 function fmtCost(usd, loc) {
-  if (!usd && !loc) return "Unknown";
+  if (!usd && !loc) return null;
   var p = [];
   if (usd) p.push("$" + usd + " USD");
   if (loc) p.push(loc);
   return p.join(" / ");
+}
+
+function visaFree(vr) {
+  return vr === false || vr === "visa_free";
+}
+
+function statCost(d) {
+  var v = fmtCost(d.cost_usd, d.cost_local);
+  if (v) return { val: v, cls: "cyan", sub: "Visa fee" };
+  if (visaFree(d.visa_required)) return { val: "Free", cls: "green", sub: "No visa fee applies" };
+  return { val: "Check embassy", cls: "", sub: "Fees vary by application" };
+}
+
+function statProcessing(d) {
+  var v = fmtDays(d.processing_days_min, d.processing_days_max);
+  if (v) return { val: v, cls: "", sub: "Processing time" };
+  if (visaFree(d.visa_required)) return { val: "Not required", cls: "green", sub: "No application needed" };
+  return { val: "Check embassy", cls: "", sub: "Timeline varies" };
+}
+
+function statEntry(d) {
+  if (d.entry_type) return { val: d.entry_type.charAt(0).toUpperCase() + d.entry_type.slice(1), cls: "", sub: "Entry permitted" };
+  if (visaFree(d.visa_required)) return { val: "Multiple", cls: "green", sub: "Re-entry allowed" };
+  return { val: "See visa terms", cls: "", sub: "Depends on visa type" };
 }
 
 function renderResult(d, passport, destination, purpose) {
@@ -482,8 +507,12 @@ function renderResult(d, passport, destination, purpose) {
   if (d.embassy_url)  anchors += "<a href='" + d.embassy_url  + "' target='_blank' rel='noopener' class='ext-link'>↗ Embassy / Consulate</a>";
   if (anchors)        linksHtml = "<div class='links-row'>" + anchors + "</div>";
 
-  var stayVal  = d.max_stay_days ? d.max_stay_days + " days" : "Unknown";
+  var stayVal  = d.max_stay_days ? d.max_stay_days + " days" : (visaFree(d.visa_required) ? "Up to visa limit" : "Check embassy");
   var stayClass = d.max_stay_days ? "green" : "";
+  var staySub   = d.max_stay_days ? "Maximum permitted stay" : (visaFree(d.visa_required) ? "Confirm with embassy" : "Varies by approval");
+  var cost      = statCost(d);
+  var proc      = statProcessing(d);
+  var entry     = statEntry(d);
   var purposeCap = purpose.charAt(0).toUpperCase() + purpose.slice(1);
 
   var html =
@@ -510,10 +539,10 @@ function renderResult(d, passport, destination, purpose) {
         "<div class='summary-card'><p class='summary-text'>" + safe(d.summary, "No summary available.") + "</p></div>" +
 
         "<div class='stat-grid'>" +
-          "<div class='stat-card'><div class='stat-icon'>🕐</div><div class='stat-val " + stayClass + "'>" + stayVal + "</div><div class='stat-lbl'>Max Stay</div></div>" +
-          "<div class='stat-card'><div class='stat-icon'>💰</div><div class='stat-val cyan'>" + fmtCost(d.cost_usd, d.cost_local) + "</div><div class='stat-lbl'>Visa Cost</div></div>" +
-          "<div class='stat-card'><div class='stat-icon'>⏳</div><div class='stat-val'>" + fmtDays(d.processing_days_min, d.processing_days_max) + "</div><div class='stat-lbl'>Processing</div></div>" +
-          "<div class='stat-card'><div class='stat-icon'>🔁</div><div class='stat-val'>" + safe(d.entry_type ? d.entry_type.charAt(0).toUpperCase() + d.entry_type.slice(1) : null) + "</div><div class='stat-lbl'>Entry Type</div></div>" +
+          "<div class='stat-card'><div class='stat-icon'>🕐</div><div class='stat-val " + stayClass + "'>" + stayVal + "</div><div class='stat-lbl'>Max Stay</div><div class='stat-sub'>" + staySub + "</div></div>" +
+          "<div class='stat-card'><div class='stat-icon'>💰</div><div class='stat-val " + cost.cls + "'>" + cost.val + "</div><div class='stat-lbl'>Visa Cost</div><div class='stat-sub'>" + cost.sub + "</div></div>" +
+          "<div class='stat-card'><div class='stat-icon'>⏳</div><div class='stat-val " + proc.cls + "'>" + proc.val + "</div><div class='stat-lbl'>Processing</div><div class='stat-sub'>" + proc.sub + "</div></div>" +
+          "<div class='stat-card'><div class='stat-icon'>🔁</div><div class='stat-val " + entry.cls + "'>" + entry.val + "</div><div class='stat-lbl'>Entry Type</div><div class='stat-sub'>" + entry.sub + "</div></div>" +
         "</div>" +
 
         docsHtml + notesHtml + linksHtml +
