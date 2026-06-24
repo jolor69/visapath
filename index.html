@@ -73,16 +73,14 @@ nav{position:sticky;top:0;z-index:100;background:rgba(13,27,42,.96);border-botto
 .hero-stats{display:flex;gap:40px}
 .hero-stat-val{font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:700;color:var(--cyan);line-height:1}
 .hero-stat-lbl{font-size:12px;color:var(--txt-muted);margin-top:4px;font-weight:400}
-.hero-right{flex-shrink:0;width:420px;position:relative;z-index:1}
+.hero-right{flex-shrink:0;width:460px;position:relative;z-index:1;padding:28px 28px 28px 28px}
 
 /* FLOATING CARDS */
-.hero-img-wrap{position:relative;border-radius:20px;overflow:hidden;background:var(--dark3);border:1px solid var(--border-d);aspect-ratio:4/3;display:flex;align-items:center;justify-content:center}
-.hero-img-placeholder{text-align:center;color:rgba(255,255,255,.15)}
-.hero-img-placeholder .globe{font-size:80px;display:block;margin-bottom:12px}
-.hero-img-placeholder p{font-size:13px}
+.hero-img-wrap{position:relative;border-radius:20px;overflow:visible;border:1px solid var(--border-d);aspect-ratio:4/3;min-height:280px}
+.hero-visual{width:100%;height:100%;position:absolute;inset:0;border-radius:20px;overflow:hidden}
 .float-badge{position:absolute;background:var(--white);border-radius:14px;padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,.18);display:flex;align-items:center;gap:12px}
-.float-badge.approved{bottom:24px;left:-24px}
-.float-badge.rating{top:24px;right:-24px}
+.float-badge.approved{bottom:-16px;left:16px}
+.float-badge.rating{top:-16px;right:16px}
 .float-badge-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
 .float-badge-icon.blue{background:linear-gradient(135deg,#3B82F6,#6366F1)}
 .float-badge-icon.orange{background:linear-gradient(135deg,#F59E0B,#EF4444)}
@@ -238,7 +236,7 @@ footer{background:var(--dark);border-top:1px solid var(--border-d);padding:64px 
 /* ── RESPONSIVE ── */
 @media(max-width:1024px){
   .hero-inner{gap:40px}
-  .hero-right{width:360px}
+  .hero-right{width:400px;padding:20px}
   .routes-grid{grid-template-columns:repeat(3,1fr)}
   .footer-grid{grid-template-columns:1fr 1fr}
 }
@@ -331,9 +329,74 @@ footer{background:var(--dark);border-top:1px solid var(--border-d);padding:64px 
 
       <div class="hero-right">
         <div class="hero-img-wrap">
-          <div class="hero-img-placeholder">
-            <span class="globe">🌍</span>
-            <p>195 Countries · Any Passport</p>
+          <div class="hero-visual">
+            <svg viewBox="0 0 480 360" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block;">
+              <defs>
+                <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#162B42"/>
+                  <stop offset="100%" stop-color="#0D1B2A"/>
+                </radialGradient>
+                <radialGradient id="glowGrad" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#0EA5E9" stop-opacity="0.15"/>
+                  <stop offset="100%" stop-color="#0EA5E9" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+              <!-- Background -->
+              <rect width="480" height="360" fill="url(#bgGrad)" rx="20"/>
+              <!-- Glow -->
+              <ellipse cx="240" cy="180" rx="200" ry="160" fill="url(#glowGrad)"/>
+              <!-- Grid lines -->
+              <g stroke="#0EA5E9" stroke-opacity="0.08" stroke-width="0.8">
+                <line x1="0" y1="60" x2="480" y2="60"/><line x1="0" y1="120" x2="480" y2="120"/>
+                <line x1="0" y1="180" x2="480" y2="180"/><line x1="0" y1="240" x2="480" y2="240"/>
+                <line x1="0" y1="300" x2="480" y2="300"/>
+                <line x1="80" y1="0" x2="80" y2="360"/><line x1="160" y1="0" x2="160" y2="360"/>
+                <line x1="240" y1="0" x2="240" y2="360"/><line x1="320" y1="0" x2="320" y2="360"/>
+                <line x1="400" y1="0" x2="400" y2="360"/>
+              </g>
+              <!-- Continent blobs - simplified stylised shapes -->
+              <!-- North America -->
+              <path d="M60 80 L120 70 L150 90 L160 130 L140 160 L110 170 L80 155 L60 130 Z" fill="#0EA5E9" fill-opacity="0.25" stroke="#0EA5E9" stroke-opacity="0.5" stroke-width="1.5"/>
+              <!-- South America -->
+              <path d="M110 185 L150 178 L165 200 L160 240 L140 270 L115 265 L100 240 L105 210 Z" fill="#6366F1" fill-opacity="0.25" stroke="#6366F1" stroke-opacity="0.5" stroke-width="1.5"/>
+              <!-- Europe -->
+              <path d="M200 65 L240 60 L255 75 L250 100 L230 110 L205 105 L195 85 Z" fill="#0EA5E9" fill-opacity="0.3" stroke="#0EA5E9" stroke-opacity="0.6" stroke-width="1.5"/>
+              <!-- Africa -->
+              <path d="M205 120 L245 115 L265 135 L268 185 L250 220 L220 225 L200 205 L195 165 L200 135 Z" fill="#6366F1" fill-opacity="0.2" stroke="#6366F1" stroke-opacity="0.45" stroke-width="1.5"/>
+              <!-- Asia -->
+              <path d="M265 60 L380 55 L400 80 L410 120 L390 145 L350 155 L300 150 L268 130 L260 95 Z" fill="#0EA5E9" fill-opacity="0.2" stroke="#0EA5E9" stroke-opacity="0.45" stroke-width="1.5"/>
+              <!-- Australia -->
+              <path d="M355 200 L405 195 L420 215 L415 245 L390 255 L360 248 L348 228 Z" fill="#10B981" fill-opacity="0.25" stroke="#10B981" stroke-opacity="0.5" stroke-width="1.5"/>
+              <!-- Route line SG to Japan -->
+              <path d="M345 148 Q370 100 390 90" fill="none" stroke="#0EA5E9" stroke-width="2" stroke-dasharray="6 4" stroke-opacity="0.8"/>
+              <!-- Route line SG to Europe -->
+              <path d="M345 148 Q280 100 230 80" fill="none" stroke="#6366F1" stroke-width="1.5" stroke-dasharray="5 4" stroke-opacity="0.6"/>
+              <!-- Route line SG to Australia -->
+              <path d="M345 148 Q360 175 375 200" fill="none" stroke="#10B981" stroke-width="1.5" stroke-dasharray="5 4" stroke-opacity="0.6"/>
+              <!-- Singapore dot -->
+              <circle cx="345" cy="148" r="6" fill="#0EA5E9" fill-opacity="1"/>
+              <circle cx="345" cy="148" r="12" fill="#0EA5E9" fill-opacity="0.2"/>
+              <circle cx="345" cy="148" r="18" fill="#0EA5E9" fill-opacity="0.08"/>
+              <!-- Japan dot -->
+              <circle cx="395" cy="88" r="5" fill="#F59E0B"/>
+              <circle cx="395" cy="88" r="10" fill="#F59E0B" fill-opacity="0.2"/>
+              <!-- London dot -->
+              <circle cx="218" cy="72" r="4" fill="#6366F1"/>
+              <circle cx="218" cy="72" r="9" fill="#6366F1" fill-opacity="0.2"/>
+              <!-- Sydney dot -->
+              <circle cx="390" cy="220" r="4" fill="#10B981"/>
+              <circle cx="390" cy="220" r="9" fill="#10B981" fill-opacity="0.2"/>
+              <!-- Label: SG -->
+              <text x="350" y="145" font-family="Inter,sans-serif" font-size="9" fill="#0EA5E9" font-weight="600">SG</text>
+              <!-- Label: JP -->
+              <text x="400" y="86" font-family="Inter,sans-serif" font-size="9" fill="#F59E0B" font-weight="600">JP</text>
+              <!-- Label: UK -->
+              <text x="222" y="70" font-family="Inter,sans-serif" font-size="9" fill="#A5B4FC" font-weight="600">UK</text>
+              <!-- Label: AU -->
+              <text x="394" y="218" font-family="Inter,sans-serif" font-size="9" fill="#10B981" font-weight="600">AU</text>
+              <!-- Bottom label -->
+              <text x="240" y="335" font-family="Inter,sans-serif" font-size="11" fill="rgba(255,255,255,0.3)" text-anchor="middle" letter-spacing="2">195 COUNTRIES · ANY PASSPORT</text>
+            </svg>
           </div>
           <!-- Floating approval badge -->
           <div class="float-badge approved">
