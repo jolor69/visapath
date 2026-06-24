@@ -4,29 +4,79 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type"
 };
 
-const SYSTEM_PROMPT = `You are VisaPath, a visa requirements data API. You MUST respond with raw JSON only. No markdown. No backticks. No explanation. No preamble. Your entire response must be a single valid JSON object that can be passed directly to JSON.parse(). If you add any text outside the JSON object, the system will break.
+// Rate limit config
+var FREE_DAILY_LIMIT = 5;
+var WINDOW_SECONDS = 86400; // 24 hours
 
-Respond ONLY with this exact JSON structure:
-{
-  "visa_required": true | false | "visa_on_arrival" | "e_visa" | "unknown",
-  "visa_type": "string or null",
-  "max_stay_days": number or null,
-  "cost_usd": number or null,
-  "cost_local": "string or null",
-  "processing_days_min": number or null,
-  "processing_days_max": number or null,
-  "entry_type": "single" | "multiple" | "varies" | null,
-  "validity_days": number or null,
-  "documents_required": ["array of strings"],
-  "special_notes": ["array of important notes, warnings, or conditions"],
-  "official_url": "string or null",
-  "embassy_url": "string or null",
-  "last_known_update": "string — your best estimate of when this policy was last updated",
-  "confidence": "high" | "medium" | "low",
-  "summary": "2-3 sentence plain English summary of what the traveller needs to know"
-}`;
+var SYSTEM_PROMPT = "You are VisaPath, a visa requirements data API. You MUST respond with raw JSON only. No markdown. No backticks. No explanation. No preamble. Your entire response must be a single valid JSON object that can be passed directly to JSON.parse(). If you add any text outside the JSON object, the system will break.\n\nRespond ONLY with this exact JSON structure:\n{\n  \"visa_required\": true | false | \"visa_on_arrival\" | \"e_visa\" | \"unknown\",\n  \"visa_type\": \"string or null\",\n  \"max_stay_days\": number or null,\n  \"cost_usd\": number or null,\n  \"cost_local\": \"string or null\",\n  \"processing_days_min\": number or null,\n  \"processing_days_max\": number or null,\n  \"entry_type\": \"single\" | \"multiple\" | \"varies\" | null,\n  \"validity_days\": number or null,\n  \"documents_required\": [\"array of strings\"],\n  \"special_notes\": [\"array of important notes, warnings, or conditions\"],\n  \"official_url\": \"string or null\",\n  \"embassy_url\": \"string or null\",\n  \"last_known_update\": \"string — your best estimate of when this policy was last updated\",\n  \"confidence\": \"high\" | \"medium\" | \"low\",\n  \"summary\": \"2-3 sentence plain English summary of what the traveller needs to know\"\n}";
+
+function getClientIP(request) {
+  return request.headers.get("CF-Connecting-IP") ||
+         request.headers.get("X-Forwarded-For") ||
+         "unknown";
+}
+
+async function checkRateLimit(env, ip) {
+  if (!env.VISAPATH_KV) return { allowed: true, remaining: FREE_DAILY_LIMIT, reset: 0 };
+
+  var key = "rl:" + ip;
+  var now = Math.floor(Date.now() / 1000);
+  var windowStart = now - WINDOW_SECONDS;
+
+  var raw = null;
+  try {
+    raw = await env.VISAPATH_KV.get(key);
+  } catch (e) {
+    // KV unavailable - fail open
+    return { allowed: true, remaining: FREE_DAILY_LIMIT, reset: 0 };
+  }
+
+  var data = raw ? JSON.parse(raw) : { count: 0, window_start: now };
+
+  // Reset if window expired
+  if (data.window_start < windowStart) {
+    data = { count: 0, window_start: now };
+  }
+
+  var remaining = FREE_DAILY_LIMIT - data.count;
+  var resetAt = data.window_start + WINDOW_SECONDS;
+
+  if (data.count >= FREE_DAILY_LIMIT) {
+    return { allowed: false, remaining: 0, reset: resetAt };
+  }
+
+  // Increment
+  data.count += 1;
+  try {
+    await env.VISAPATH_KV.put(key, JSON.stringify(data), { expirationTtl: WINDOW_SECONDS });
+  } catch (e) {
+    // KV write failed - still allow
+  }
+
+  return { allowed: true, remaining: FREE_DAILY_LIMIT - data.count, reset: resetAt };
+}
 
 async function handleVisaCheck(request, env) {
+  var ip = getClientIP(request);
+  var rateCheck = await checkRateLimit(env, ip);
+
+  if (!rateCheck.allowed) {
+    var resetDate = new Date(rateCheck.reset * 1000).toUTCString();
+    return new Response(JSON.stringify({
+      error: "rate_limited",
+      message: "You have reached the free limit of " + FREE_DAILY_LIMIT + " checks per day. Limit resets at " + resetDate + ".",
+      reset_at: rateCheck.reset
+    }), {
+      status: 429,
+      headers: Object.assign({
+        "Content-Type": "application/json",
+        "X-RateLimit-Limit": String(FREE_DAILY_LIMIT),
+        "X-RateLimit-Remaining": "0",
+        "X-RateLimit-Reset": String(rateCheck.reset)
+      }, CORS_HEADERS)
+    });
+  }
+
   var body;
   try {
     body = await request.json();
@@ -97,14 +147,12 @@ async function handleVisaCheck(request, env) {
     });
   }
 
-  // Strip markdown fences if present
   var cleaned = rawContent.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
 
   var parsed;
   try {
     parsed = JSON.parse(cleaned);
   } catch (e) {
-    // Attempt single-quote fix (DeepSeek-style)
     try {
       parsed = JSON.parse(cleaned.replace(/'/g, '"'));
     } catch (e2) {
@@ -115,9 +163,18 @@ async function handleVisaCheck(request, env) {
     }
   }
 
-  return new Response(JSON.stringify({ ok: true, data: parsed }), {
+  return new Response(JSON.stringify({
+    ok: true,
+    data: parsed,
+    meta: { remaining: rateCheck.remaining, limit: FREE_DAILY_LIMIT }
+  }), {
     status: 200,
-    headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
+    headers: Object.assign({
+      "Content-Type": "application/json",
+      "X-RateLimit-Limit": String(FREE_DAILY_LIMIT),
+      "X-RateLimit-Remaining": String(rateCheck.remaining),
+      "X-RateLimit-Reset": String(rateCheck.reset)
+    }, CORS_HEADERS)
   });
 }
 

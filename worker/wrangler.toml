@@ -5,5 +5,9 @@ compatibility_date = "2024-01-01"
 [vars]
 ENVIRONMENT = "production"
 
+[[kv_namespaces]]
+binding = "VISAPATH_KV"
+id = "3ba04cf600d34d5ca00bcf6a7361b766"
+
 # Set secret via:
 # wrangler secret put OPENROUTER_API_KEY

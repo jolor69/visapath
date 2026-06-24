@@ -250,7 +250,23 @@ select option { background: #1a2e42; color: var(--white); }
 .new-search-btn:hover { border-color: var(--cyan); color: var(--cyan); }
 
 /* ERROR */
+.rate-limit-box { display: none; max-width: 600px; margin: 0 auto; padding: 0 24px 48px; }
+.rate-limit-box.visible { display: block; animation: fadeUp 0.3s ease; }
+.rate-limit-inner { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3); border-radius: 16px; padding: 32px; text-align: center; }
+.rate-limit-title { color: #F59E0B; font-size: 17px; font-weight: 600; margin-bottom: 10px; }
+.rate-limit-inner p { color: var(--muted); font-size: 14px; line-height: 1.7; }
+.rate-limit-box { display: none; max-width: 600px; margin: 0 auto; padding: 0 24px 48px; }
+.rate-limit-box.visible { display: block; animation: fadeUp 0.3s ease; }
+.rate-limit-inner { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3); border-radius: 16px; padding: 32px; text-align: center; }
+.rate-limit-title { color: #F59E0B; font-size: 17px; font-weight: 600; margin-bottom: 10px; }
+.rate-limit-inner p { color: var(--muted); font-size: 14px; line-height: 1.7; }
 .error-box { display: none; max-width: 600px; margin: 0 auto; padding: 48px 24px; }
+.rate-limit-box { display: none; max-width: 600px; margin: 0 auto; padding: 0 24px 48px; }
+.rate-limit-box.visible { display: block; }
+.rate-limit-inner { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3); border-radius: 16px; padding: 28px; text-align: center; }
+.rate-limit-title { color: #F59E0B; font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+.rate-limit-inner p { color: var(--muted); font-size: 14px; line-height: 1.65; }
+.checks-remaining { display: inline-flex; align-items: center; gap: 6px; background: rgba(14,165,233,0.1); border: 1px solid rgba(14,165,233,0.2); border-radius: 20px; padding: 4px 12px; font-size: 12px; color: var(--cyan); font-weight: 600; margin-top: 12px; }
 .error-box.visible { display: block; }
 .error-inner { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); border-radius: 16px; padding: 32px; text-align: center; }
 .error-title { color: #EF4444; font-size: 17px; font-weight: 600; margin-bottom: 8px; }
@@ -266,15 +282,22 @@ footer a { color: var(--cyan); text-decoration: none; }
   .hero-inner { flex-direction: column; gap: 40px; }
   .hero-right { width: 100%; }
   .stat-grid { grid-template-columns: 1fr 1fr; }
-  nav, .hero, .result-strip, .result-body, footer { padding-left: 24px; padding-right: 24px; }
+  nav, .hero, .result-strip, .result-body, footer { padding-left: 16px; padding-right: 16px; }
+  .result-strip-inner, .result-body-inner { width: 100%; }
 }
 @media (max-width: 480px) {
   .stat-grid { grid-template-columns: 1fr 1fr; }
-  .result-header { flex-direction: column; gap: 16px; }
-  .hero-stats { gap: 24px; }
-  .result-strip { padding: 40px 20px; }
-  .result-body { padding: 32px 20px; }
-  .summary-card, .section-card { padding: 18px 20px; }
+  .result-header { flex-direction: column; gap: 12px; }
+  .hero-stats { gap: 20px; }
+  .result-strip { padding: 32px 16px; }
+  .result-body { padding: 24px 16px; }
+  .summary-card, .section-card { padding: 16px; }
+  .result-title { font-size: 22px; }
+  .stat-val { font-size: 17px; }
+  .stat-card { padding: 14px 10px; }
+  .form-card { padding: 20px 16px; }
+  .links-row { flex-direction: column; }
+  .ext-link { justify-content: center; }
 }
 @media (prefers-reduced-motion: reduce) {
   .spin { animation: none; }
@@ -369,6 +392,17 @@ footer a { color: var(--cyan); text-decoration: none; }
   <div class="error-inner">
     <div class="error-title">Could not retrieve requirements</div>
     <p id="errorMsg">Something went wrong. Please try again.</p>
+  </div>
+</div>
+
+<!-- RATE LIMIT -->
+<div class="rate-limit-box" id="rateLimitBox">
+  <div class="rate-limit-inner">
+    <div class="rate-limit-title">Daily Limit Reached</div>
+    <p>Free users can check <strong>5 visa routes per day</strong>. Your limit resets in 24 hours.<br><br>Need more checks? Upgrade to Traveller for unlimited access.</p>
+    <div style="margin-top:20px">
+      <a href="./index.html#pricing" class="price-btn-primary" style="display:inline-block;padding:12px 28px;text-decoration:none;border-radius:40px;background:linear-gradient(135deg,#0EA5E9,#6366F1);color:#fff;font-weight:600;font-size:14px;">View Plans</a>
+    </div>
   </div>
 </div>
 
@@ -578,6 +612,7 @@ function hideAll() {
   document.getElementById("loading").className = "loading";
   document.getElementById("result").className = "result";
   document.getElementById("errorBox").className = "error-box";
+  document.getElementById("rateLimitBox").className = "rate-limit-box";
 }
 
 var selectedPurpose = "tourism";
@@ -614,18 +649,33 @@ document.getElementById("checkBtn").addEventListener("click", function() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ passport: passport, destination: destination, purpose: selectedPurpose })
   })
-  .then(function(r) { return r.json(); })
+  .then(function(r) {
+    if (r.status === 429) {
+      return r.json().then(function(j) { throw { isRateLimit: true, data: j }; });
+    }
+    return r.json();
+  })
   .then(function(json) {
     setLoading(false);
     if (!json.ok || !json.data) { showError(json.error || "Could not retrieve visa requirements."); return; }
+    // Show remaining checks badge if low
+    if (json.meta && json.meta.remaining <= 2) {
+      var rem = json.meta.remaining;
+      console.log("Checks remaining today: " + rem);
+    }
     renderResult(json.data, passport, destination, selectedPurpose);
     var el = document.getElementById("result");
     el.className = "result visible";
     el.scrollIntoView({ behavior: "smooth", block: "start" });
   })
-  .catch(function() {
+  .catch(function(err) {
     setLoading(false);
-    showError("Network error — please check your connection and try again.");
+    if (err && err.isRateLimit) {
+      document.getElementById("rateLimitBox").className = "rate-limit-box visible";
+      document.getElementById("rateLimitBox").scrollIntoView({ behavior: "smooth", block: "center" });
+    } else {
+      showError("Network error — please check your connection and try again.");
+    }
   })
   .finally(function() {
     document.getElementById("checkBtn").disabled = false;
