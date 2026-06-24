@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VisaPath — Know Before You Go</title>
+<meta name="description" content="Instant AI-powered visa requirements for any passport and destination. Know exactly what you need before you travel.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --dark:     #0D1B2A;
+  --dark2:    #112236;
+  --dark3:    #152B42;
+  --border-d: rgba(255,255,255,0.08);
+  --light-bg: #F0F4F8;
+  --light-bg2:#E8EFF6;
+  --card-bg:  #FFFFFF;
+  --cyan:     #0EA5E9;
+  --indigo:   #6366F1;
+  --teal:     #0891B2;
+  --green:    #10B981;
+  --white:    #FFFFFF;
+  --dark-txt: #0D1B2A;
+  --mid-txt:  #475569;
+  --muted:    #94A3B8;
+  --tag-bg:   rgba(14,165,233,0.12);
+  --tag-bdr:  rgba(14,165,233,0.3);
+}
+
+html, body { background: var(--dark); color: var(--white); font-family: 'Inter', sans-serif; font-size: 16px; line-height: 1.6; }
+
+/* NAV */
+nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 48px; height: 72px;
+  background: rgba(13,27,42,0.95);
+  border-bottom: 1px solid var(--border-d);
+  position: sticky; top: 0; z-index: 100;
+  backdrop-filter: blur(12px);
+}
+.nav-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.nav-logo-ring {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--cyan), var(--indigo));
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Cormorant Garamond', serif; font-weight: 700; font-size: 18px; color: #fff;
+}
+.nav-name { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 700; color: var(--white); letter-spacing: 0.02em; }
+.nav-right { display: flex; align-items: center; gap: 16px; }
+.nav-tag { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cyan); background: rgba(14,165,233,0.1); border: 1px solid rgba(14,165,233,0.25); padding: 4px 12px; border-radius: 20px; }
+.nav-neulab { font-size: 12px; color: var(--muted); }
+
+/* HERO */
+.hero {
+  min-height: 580px;
+  background: linear-gradient(160deg, #0D1B2A 0%, #112B44 50%, #0D1B2A 100%);
+  display: flex; align-items: center;
+  padding: 80px 48px 64px;
+  position: relative; overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; top: -120px; right: -80px;
+  width: 560px; height: 560px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(14,165,233,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero::after {
+  content: '';
+  position: absolute; bottom: -80px; left: 20%;
+  width: 360px; height: 360px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-inner { max-width: 1100px; margin: 0 auto; width: 100%; display: flex; align-items: center; gap: 64px; }
+.hero-left { flex: 1; position: relative; z-index: 1; }
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(14,165,233,0.1); border: 1px solid rgba(14,165,233,0.25);
+  border-radius: 20px; padding: 6px 14px 6px 10px;
+  font-size: 12px; font-weight: 600; color: var(--cyan);
+  letter-spacing: 0.06em; text-transform: uppercase;
+  margin-bottom: 24px;
+}
+.hero-eyebrow-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); animation: pulse 2s ease infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+.hero-title { font-family: 'Cormorant Garamond', serif; font-size: clamp(42px, 5.5vw, 68px); font-weight: 700; line-height: 1.1; color: var(--white); margin-bottom: 20px; }
+.hero-title .grad { background: linear-gradient(135deg, var(--cyan), var(--indigo)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.hero-sub { font-size: 17px; color: rgba(255,255,255,0.6); font-weight: 300; line-height: 1.75; max-width: 440px; margin-bottom: 40px; }
+.hero-stats { display: flex; gap: 36px; }
+.hero-stat-val { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 700; color: var(--cyan); line-height: 1; }
+.hero-stat-lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.hero-right { flex-shrink: 0; width: 380px; position: relative; z-index: 1; }
+
+/* FORM CARD */
+.form-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  padding: 32px;
+  backdrop-filter: blur(20px);
+}
+.form-card-title { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; color: var(--white); margin-bottom: 6px; }
+.form-card-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+.form-group { margin-bottom: 16px; }
+label { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.5); margin-bottom: 8px; }
+.select-wrap { position: relative; }
+.select-wrap::after { content: ''; position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid var(--muted); pointer-events: none; }
+select {
+  width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px; color: var(--white); font-family: 'Inter', sans-serif;
+  font-size: 14px; padding: 12px 40px 12px 14px;
+  appearance: none; -webkit-appearance: none; outline: none;
+  transition: border-color 0.2s; cursor: pointer;
+}
+select:focus { border-color: var(--cyan); }
+select option { background: #1a2e42; color: var(--white); }
+.purpose-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+.purpose-btn {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px; color: rgba(255,255,255,0.55); font-family: 'Inter', sans-serif;
+  font-size: 12px; font-weight: 500; padding: 7px 12px; cursor: pointer;
+  transition: all 0.15s; white-space: nowrap;
+}
+.purpose-btn.active { background: rgba(14,165,233,0.15); border-color: rgba(14,165,233,0.5); color: var(--cyan); }
+.check-btn {
+  width: 100%; border: none; border-radius: 10px;
+  background: linear-gradient(135deg, var(--cyan) 0%, var(--indigo) 100%);
+  color: var(--white); font-family: 'Inter', sans-serif;
+  font-size: 15px; font-weight: 600; padding: 14px;
+  cursor: pointer; transition: opacity 0.2s, transform 0.1s;
+  letter-spacing: 0.02em;
+}
+.check-btn:hover { opacity: 0.9; }
+.check-btn:active { transform: scale(0.99); }
+.check-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* EYEBROW DIVIDER */
+.eyebrow-div { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px; }
+.eyebrow-line { height: 1px; width: 40px; background: var(--cyan); opacity: 0.6; }
+.eyebrow-text { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--cyan); }
+
+/* LOADING */
+.loading { display: none; text-align: center; padding: 64px 24px; }
+.loading.visible { display: block; }
+.spin { width: 48px; height: 48px; border: 2px solid rgba(14,165,233,0.2); border-top-color: var(--cyan); border-radius: 50%; animation: spin 0.75s linear infinite; margin: 0 auto 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { color: var(--muted); font-size: 14px; }
+
+/* RESULT */
+.result { display: none; }
+.result.visible { display: block; animation: fadeUp 0.35s ease; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+/* RESULT HERO STRIP */
+.result-strip {
+  background: linear-gradient(160deg, #0D1B2A, #112B44);
+  padding: 56px 48px;
+  border-bottom: 1px solid var(--border-d);
+}
+.result-strip-inner { max-width: 800px; margin: 0 auto; }
+.result-breadcrumb { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+.result-breadcrumb span { color: var(--cyan); }
+.result-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.result-title { font-family: 'Cormorant Garamond', serif; font-size: 38px; font-weight: 700; color: var(--white); line-height: 1.15; }
+.result-purpose { font-size: 14px; color: var(--muted); margin-top: 8px; }
+.status-pill {
+  flex-shrink: 0; display: flex; align-items: center; gap: 8px;
+  padding: 10px 20px; border-radius: 40px;
+  font-size: 14px; font-weight: 600; white-space: nowrap;
+}
+.status-pill.free    { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.35); color: #10B981; }
+.status-pill.arrival { background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.35); color: #F59E0B; }
+.status-pill.evisa   { background: rgba(14,165,233,0.15); border: 1px solid rgba(14,165,233,0.35); color: #0EA5E9; }
+.status-pill.required{ background: rgba(239,68,68,0.15);  border: 1px solid rgba(239,68,68,0.35);  color: #EF4444; }
+.status-pill.unknown { background: rgba(148,163,184,0.15);border: 1px solid rgba(148,163,184,0.35);color: #94A3B8; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.conf-row { display: flex; align-items: center; gap: 8px; margin-top: 20px; }
+.conf-bar-wrap { flex: 1; max-width: 160px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+.conf-bar { height: 100%; border-radius: 2px; }
+.conf-bar.high   { width: 100%; background: #10B981; }
+.conf-bar.medium { width: 65%;  background: #F59E0B; }
+.conf-bar.low    { width: 30%;  background: #EF4444; }
+.conf-label { font-size: 12px; color: var(--muted); }
+
+/* RESULT BODY */
+.result-body { background: var(--light-bg); padding: 48px; }
+.result-body-inner { max-width: 800px; margin: 0 auto; }
+
+/* SUMMARY */
+.summary-card {
+  background: var(--white); border-radius: 16px;
+  padding: 24px 28px; margin-bottom: 24px;
+  border-left: 4px solid var(--cyan);
+  box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+}
+.summary-text { font-size: 15px; color: var(--dark-txt); line-height: 1.75; font-weight: 400; }
+
+/* STAT GRID */
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+.stat-card { background: var(--white); border-radius: 14px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); text-align: center; }
+.stat-icon { font-size: 22px; margin-bottom: 8px; }
+.stat-val { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 700; color: var(--dark-txt); line-height: 1.1; }
+.stat-val.cyan  { color: var(--cyan); }
+.stat-val.green { color: var(--green); }
+.stat-lbl { font-size: 11px; color: var(--mid-txt); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; }
+
+/* SECTION CARDS */
+.section-card { background: var(--white); border-radius: 16px; padding: 24px 28px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
+.section-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.section-icon { width: 32px; height: 32px; border-radius: 8px; background: rgba(14,165,233,0.1); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.section-title { font-size: 14px; font-weight: 600; color: var(--dark-txt); letter-spacing: 0.02em; }
+.doc-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.doc-list li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: var(--dark-txt); line-height: 1.5; }
+.doc-check { width: 18px; height: 18px; border-radius: 50%; background: rgba(16,185,129,0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; font-size: 10px; color: var(--green); }
+.note-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.note-list li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: #64748B; line-height: 1.55; }
+.note-icon { width: 18px; height: 18px; border-radius: 50%; background: rgba(245,158,11,0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; font-size: 10px; color: #F59E0B; font-weight: 700; }
+
+/* LINKS */
+.links-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.ext-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--white); border: 1px solid #E2E8F0;
+  border-radius: 8px; color: var(--cyan); font-size: 13px;
+  font-weight: 500; padding: 9px 14px; text-decoration: none;
+  transition: all 0.15s; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.ext-link:hover { border-color: var(--cyan); background: rgba(14,165,233,0.04); }
+
+/* DISCLAIMER */
+.disclaimer {
+  background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2);
+  border-radius: 12px; padding: 16px 20px; font-size: 12px;
+  color: var(--mid-txt); line-height: 1.65; margin-bottom: 24px;
+}
+.disclaimer strong { color: #92400E; }
+
+/* NEW SEARCH */
+.new-search-btn {
+  display: block; width: 100%; background: transparent;
+  border: 1px solid #CBD5E1; border-radius: 10px;
+  color: var(--mid-txt); font-family: 'Inter', sans-serif;
+  font-size: 14px; font-weight: 500; padding: 13px;
+  cursor: pointer; transition: all 0.15s; text-align: center;
+}
+.new-search-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+
+/* ERROR */
+.error-box { display: none; max-width: 600px; margin: 0 auto; padding: 48px 24px; }
+.error-box.visible { display: block; }
+.error-inner { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); border-radius: 16px; padding: 32px; text-align: center; }
+.error-title { color: #EF4444; font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+.error-inner p { color: var(--muted); font-size: 14px; }
+
+/* FOOTER */
+footer { background: var(--dark2); border-top: 1px solid var(--border-d); padding: 32px 48px; text-align: center; }
+footer p { font-size: 12px; color: var(--muted); }
+footer a { color: var(--cyan); text-decoration: none; }
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .hero-inner { flex-direction: column; gap: 40px; }
+  .hero-right { width: 100%; }
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  nav, .hero, .result-strip, .result-body, footer { padding-left: 24px; padding-right: 24px; }
+}
+@media (max-width: 480px) {
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .result-header { flex-direction: column; gap: 16px; }
+  .hero-stats { gap: 24px; }
+  .result-strip { padding: 40px 20px; }
+  .result-body { padding: 32px 20px; }
+  .summary-card, .section-card { padding: 18px 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spin { animation: none; }
+  .result { animation: none; }
+  .hero-eyebrow-dot { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="./index.html" class="nav-brand">
+    <div class="nav-logo-ring">V</div>
+    <span class="nav-name">VisaPath</span>
+  </a>
+  <div class="nav-right">
+    <span class="nav-tag">AI-Powered</span>
+    <span class="nav-neulab">by NeuLab</span>
+  </div>
+</nav>
+
+<!-- HERO + FORM -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-left">
+      <div class="hero-eyebrow">
+        <span class="hero-eyebrow-dot"></span>
+        Instant Visa Intelligence
+      </div>
+      <h1 class="hero-title">Your Gateway to<br><span class="grad">Global Travel</span></h1>
+      <p class="hero-sub">AI-powered visa requirements for any passport and destination. Know exactly what you need — before you book.</p>
+      <div class="hero-stats">
+        <div>
+          <div class="hero-stat-val">195</div>
+          <div class="hero-stat-lbl">Countries covered</div>
+        </div>
+        <div>
+          <div class="hero-stat-val">AI</div>
+          <div class="hero-stat-lbl">Grounded answers</div>
+        </div>
+        <div>
+          <div class="hero-stat-val">Free</div>
+          <div class="hero-stat-lbl">No signup needed</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-right">
+      <div class="form-card">
+        <div class="form-card-title">Check Visa Requirements</div>
+        <div class="form-card-sub">Select your passport and destination to get started.</div>
+
+        <div class="form-group">
+          <label for="passport">Your Passport</label>
+          <div class="select-wrap">
+            <select id="passport"><option value="">Select passport...</option></select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="destination">Destination Country</label>
+          <div class="select-wrap">
+            <select id="destination"><option value="">Select destination...</option></select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Purpose of Visit</label>
+          <div class="purpose-row">
+            <button class="purpose-btn active" data-purpose="tourism">Tourism</button>
+            <button class="purpose-btn" data-purpose="business">Business</button>
+            <button class="purpose-btn" data-purpose="transit">Transit</button>
+            <button class="purpose-btn" data-purpose="study">Study</button>
+            <button class="purpose-btn" data-purpose="work">Work</button>
+          </div>
+        </div>
+
+        <button class="check-btn" id="checkBtn" disabled>Check Requirements →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LOADING -->
+<div class="loading" id="loading">
+  <div class="spin"></div>
+  <p class="loading-text">Checking visa requirements...</p>
+</div>
+
+<!-- ERROR -->
+<div class="error-box" id="errorBox">
+  <div class="error-inner">
+    <div class="error-title">Could not retrieve requirements</div>
+    <p id="errorMsg">Something went wrong. Please try again.</p>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div class="result" id="result"></div>
+
+<footer>
+  <p>VisaPath is part of <a href="https://neulab.xyz" target="_blank">NeuLab Inc.</a> &nbsp;·&nbsp; AI-assisted guidance only — always verify with the official embassy before travel.</p>
+</footer>
+
+<script>
+var WORKER_URL = "https://visapath-worker.joe-lord-ai.workers.dev";
+
+var COUNTRIES = [
+  "Afghanistan","Albania","Algeria","Andorra","Angola","Antigua and Barbuda","Argentina",
+  "Armenia","Australia","Austria","Azerbaijan","Bahamas","Bahrain","Bangladesh","Barbados",
+  "Belarus","Belgium","Belize","Benin","Bhutan","Bolivia","Bosnia and Herzegovina","Botswana",
+  "Brazil","Brunei","Bulgaria","Burkina Faso","Burundi","Cabo Verde","Cambodia","Cameroon",
+  "Canada","Central African Republic","Chad","Chile","China","Colombia","Comoros",
+  "Congo (Democratic Republic)","Congo (Republic)","Costa Rica","Croatia","Cuba","Cyprus",
+  "Czech Republic","Denmark","Djibouti","Dominica","Dominican Republic","Ecuador","Egypt",
+  "El Salvador","Equatorial Guinea","Eritrea","Estonia","Eswatini","Ethiopia","Fiji",
+  "Finland","France","Gabon","Gambia","Georgia","Germany","Ghana","Greece","Grenada",
+  "Guatemala","Guinea","Guinea-Bissau","Guyana","Haiti","Honduras","Hungary","Iceland",
+  "India","Indonesia","Iran","Iraq","Ireland","Israel","Italy","Jamaica","Japan","Jordan",
+  "Kazakhstan","Kenya","Kiribati","Kosovo","Kuwait","Kyrgyzstan","Laos","Latvia","Lebanon",
+  "Lesotho","Liberia","Libya","Liechtenstein","Lithuania","Luxembourg","Madagascar","Malawi",
+  "Malaysia","Maldives","Mali","Malta","Marshall Islands","Mauritania","Mauritius","Mexico",
+  "Micronesia","Moldova","Monaco","Mongolia","Montenegro","Morocco","Mozambique","Myanmar",
+  "Namibia","Nauru","Nepal","Netherlands","New Zealand","Nicaragua","Niger","Nigeria",
+  "North Korea","North Macedonia","Norway","Oman","Pakistan","Palau","Palestine","Panama",
+  "Papua New Guinea","Paraguay","Peru","Philippines","Poland","Portugal","Qatar","Romania",
+  "Russia","Rwanda","Saint Kitts and Nevis","Saint Lucia","Saint Vincent and the Grenadines",
+  "Samoa","San Marino","Sao Tome and Principe","Saudi Arabia","Senegal","Serbia","Seychelles",
+  "Sierra Leone","Singapore","Slovakia","Slovenia","Solomon Islands","Somalia","South Africa",
+  "South Korea","South Sudan","Spain","Sri Lanka","Sudan","Suriname","Sweden","Switzerland",
+  "Syria","Taiwan","Tajikistan","Tanzania","Thailand","Timor-Leste","Togo","Tonga",
+  "Trinidad and Tobago","Tunisia","Turkey","Turkmenistan","Tuvalu","Uganda","Ukraine",
+  "United Arab Emirates","United Kingdom","United States","Uruguay","Uzbekistan","Vanuatu",
+  "Vatican City","Venezuela","Vietnam","Yemen","Zambia","Zimbabwe"
+];
+
+function populateSelects() {
+  var pp = document.getElementById("passport");
+  var dd = document.getElementById("destination");
+  for (var i = 0; i < COUNTRIES.length; i++) {
+    var c = COUNTRIES[i];
+    var o1 = document.createElement("option");
+    o1.value = c; o1.textContent = c;
+    pp.appendChild(o1);
+    var o2 = document.createElement("option");
+    o2.value = c; o2.textContent = c;
+    dd.appendChild(o2);
+  }
+}
+
+function getStatusConfig(vr) {
+  if (vr === false)             return { cls: "free",     dot: "●", label: "Visa Free" };
+  if (vr === "visa_on_arrival") return { cls: "arrival",  dot: "●", label: "Visa on Arrival" };
+  if (vr === "e_visa")          return { cls: "evisa",    dot: "●", label: "E-Visa Required" };
+  if (vr === true)              return { cls: "required", dot: "●", label: "Visa Required" };
+  return                               { cls: "unknown",  dot: "●", label: "Check Official Source" };
+}
+
+function safe(v, fb) { return (v !== null && v !== undefined) ? String(v) : (fb || "Unknown"); }
+
+function fmtDays(mn, mx) {
+  if (!mn && !mx) return "Unknown";
+  if (mn && mx && mn !== mx) return mn + "–" + mx + " days";
+  return (mn || mx) + " days";
+}
+
+function fmtCost(usd, loc) {
+  if (!usd && !loc) return "Unknown";
+  var p = [];
+  if (usd) p.push("$" + usd + " USD");
+  if (loc) p.push(loc);
+  return p.join(" / ");
+}
+
+function renderResult(d, passport, destination, purpose) {
+  var sc = getStatusConfig(d.visa_required);
+  var confCls = d.confidence || "medium";
+  var confLabels = { high: "High confidence", medium: "Medium confidence", low: "Low confidence — verify carefully" };
+
+  var docsHtml = "";
+  if (d.documents_required && d.documents_required.length) {
+    var rows = "";
+    for (var i = 0; i < d.documents_required.length; i++) {
+      rows += "<li><span class='doc-check'>✓</span><span>" + d.documents_required[i] + "</span></li>";
+    }
+    docsHtml = "<div class='section-card'>" +
+      "<div class='section-head'><div class='section-icon'>📋</div><div class='section-title'>Documents Required</div></div>" +
+      "<ul class='doc-list'>" + rows + "</ul></div>";
+  }
+
+  var notesHtml = "";
+  if (d.special_notes && d.special_notes.length) {
+    var nrows = "";
+    for (var j = 0; j < d.special_notes.length; j++) {
+      nrows += "<li><span class='note-icon'>!</span><span>" + d.special_notes[j] + "</span></li>";
+    }
+    notesHtml = "<div class='section-card'>" +
+      "<div class='section-head'><div class='section-icon'>⚠️</div><div class='section-title'>Important Notes</div></div>" +
+      "<ul class='note-list'>" + nrows + "</ul></div>";
+  }
+
+  var linksHtml = "";
+  var anchors = "";
+  if (d.official_url) anchors += "<a href='" + d.official_url + "' target='_blank' rel='noopener' class='ext-link'>↗ Official Source</a>";
+  if (d.embassy_url)  anchors += "<a href='" + d.embassy_url  + "' target='_blank' rel='noopener' class='ext-link'>↗ Embassy / Consulate</a>";
+  if (anchors)        linksHtml = "<div class='links-row'>" + anchors + "</div>";
+
+  var stayVal  = d.max_stay_days ? d.max_stay_days + " days" : "Unknown";
+  var stayClass = d.max_stay_days ? "green" : "";
+  var purposeCap = purpose.charAt(0).toUpperCase() + purpose.slice(1);
+
+  var html =
+    "<div class='result-strip'>" +
+      "<div class='result-strip-inner'>" +
+        "<div class='result-breadcrumb'><span>" + passport + "</span> &nbsp;→&nbsp; <span>" + destination + "</span></div>" +
+        "<div class='result-header'>" +
+          "<div>" +
+            "<div class='result-title'>" + passport + " to " + destination + "</div>" +
+            "<div class='result-purpose'>" + purposeCap + " travel</div>" +
+          "</div>" +
+          "<div class='status-pill " + sc.cls + "'><span class='status-dot'></span>" + sc.label + "</div>" +
+        "</div>" +
+        "<div class='conf-row'>" +
+          "<div class='conf-bar-wrap'><div class='conf-bar " + confCls + "'></div></div>" +
+          "<span class='conf-label'>" + (confLabels[confCls] || "Medium confidence") + "</span>" +
+        "</div>" +
+      "</div>" +
+    "</div>" +
+
+    "<div class='result-body'>" +
+      "<div class='result-body-inner'>" +
+
+        "<div class='summary-card'><p class='summary-text'>" + safe(d.summary, "No summary available.") + "</p></div>" +
+
+        "<div class='stat-grid'>" +
+          "<div class='stat-card'><div class='stat-icon'>🕐</div><div class='stat-val " + stayClass + "'>" + stayVal + "</div><div class='stat-lbl'>Max Stay</div></div>" +
+          "<div class='stat-card'><div class='stat-icon'>💰</div><div class='stat-val cyan'>" + fmtCost(d.cost_usd, d.cost_local) + "</div><div class='stat-lbl'>Visa Cost</div></div>" +
+          "<div class='stat-card'><div class='stat-icon'>⏳</div><div class='stat-val'>" + fmtDays(d.processing_days_min, d.processing_days_max) + "</div><div class='stat-lbl'>Processing</div></div>" +
+          "<div class='stat-card'><div class='stat-icon'>🔁</div><div class='stat-val'>" + safe(d.entry_type ? d.entry_type.charAt(0).toUpperCase() + d.entry_type.slice(1) : null) + "</div><div class='stat-lbl'>Entry Type</div></div>" +
+        "</div>" +
+
+        docsHtml + notesHtml + linksHtml +
+
+        "<div class='disclaimer'><strong>Important:</strong> This is AI-assisted guidance based on publicly available information" +
+          (d.last_known_update ? " (last known update: " + d.last_known_update + ")" : "") +
+          ". Visa policies change without notice. Always verify with the official embassy or consulate before booking. NeuLab accepts no liability for denied entry or boarding.</div>" +
+
+        "<button class='new-search-btn' id='newSearchBtn'>← Check Another Route</button>" +
+
+      "</div>" +
+    "</div>";
+
+  document.getElementById("result").innerHTML = html;
+
+  document.getElementById("newSearchBtn").addEventListener("click", function() {
+    document.getElementById("result").className = "result";
+    document.getElementById("errorBox").className = "error-box";
+    document.getElementById("passport").value = "";
+    document.getElementById("destination").value = "";
+    document.getElementById("checkBtn").disabled = true;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+}
+
+function setLoading(on) {
+  document.getElementById("loading").className = on ? "loading visible" : "loading";
+}
+function showError(msg) {
+  document.getElementById("errorMsg").textContent = msg || "Something went wrong.";
+  document.getElementById("errorBox").className = "error-box visible";
+}
+function hideAll() {
+  document.getElementById("loading").className = "loading";
+  document.getElementById("result").className = "result";
+  document.getElementById("errorBox").className = "error-box";
+}
+
+var selectedPurpose = "tourism";
+var purposeBtns = document.querySelectorAll(".purpose-btn");
+for (var b = 0; b < purposeBtns.length; b++) {
+  (function(btn) {
+    btn.addEventListener("click", function() {
+      for (var x = 0; x < purposeBtns.length; x++) purposeBtns[x].classList.remove("active");
+      btn.classList.add("active");
+      selectedPurpose = btn.getAttribute("data-purpose");
+    });
+  })(purposeBtns[b]);
+}
+
+function checkSelects() {
+  var p = document.getElementById("passport").value;
+  var d = document.getElementById("destination").value;
+  document.getElementById("checkBtn").disabled = !(p && d);
+}
+document.getElementById("passport").addEventListener("change", checkSelects);
+document.getElementById("destination").addEventListener("change", checkSelects);
+
+document.getElementById("checkBtn").addEventListener("click", function() {
+  var passport    = document.getElementById("passport").value;
+  var destination = document.getElementById("destination").value;
+  if (!passport || !destination) return;
+
+  hideAll();
+  setLoading(true);
+  document.getElementById("checkBtn").disabled = true;
+
+  fetch(WORKER_URL + "/visa-check", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ passport: passport, destination: destination, purpose: selectedPurpose })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(json) {
+    setLoading(false);
+    if (!json.ok || !json.data) { showError(json.error || "Could not retrieve visa requirements."); return; }
+    renderResult(json.data, passport, destination, selectedPurpose);
+    var el = document.getElementById("result");
+    el.className = "result visible";
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  })
+  .catch(function() {
+    setLoading(false);
+    showError("Network error — please check your connection and try again.");
+  })
+  .finally(function() {
+    document.getElementById("checkBtn").disabled = false;
+  });
+});
+
+populateSelects();
+</script>
+</body>
+</html>
