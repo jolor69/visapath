@@ -330,72 +330,92 @@ footer{background:var(--dark);border-top:1px solid var(--border-d);padding:64px 
       <div class="hero-right">
         <div class="hero-img-wrap">
           <div class="hero-visual">
-            <svg viewBox="0 0 480 360" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block;">
+            <svg viewBox="0 0 480 340" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block;border-radius:20px;">
               <defs>
-                <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stop-color="#162B42"/>
+                <radialGradient id="bg" cx="50%" cy="40%" r="60%">
+                  <stop offset="0%" stop-color="#1a3558"/>
                   <stop offset="100%" stop-color="#0D1B2A"/>
                 </radialGradient>
-                <radialGradient id="glowGrad" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stop-color="#0EA5E9" stop-opacity="0.15"/>
-                  <stop offset="100%" stop-color="#0EA5E9" stop-opacity="0"/>
+                <radialGradient id="glow1" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#0EA5E9" stop-opacity="0.18"/>
+                  <stop offset="100%" stop-color="transparent"/>
                 </radialGradient>
               </defs>
-              <!-- Background -->
-              <rect width="480" height="360" fill="url(#bgGrad)" rx="20"/>
-              <!-- Glow -->
-              <ellipse cx="240" cy="180" rx="200" ry="160" fill="url(#glowGrad)"/>
-              <!-- Grid lines -->
-              <g stroke="#0EA5E9" stroke-opacity="0.08" stroke-width="0.8">
-                <line x1="0" y1="60" x2="480" y2="60"/><line x1="0" y1="120" x2="480" y2="120"/>
-                <line x1="0" y1="180" x2="480" y2="180"/><line x1="0" y1="240" x2="480" y2="240"/>
-                <line x1="0" y1="300" x2="480" y2="300"/>
-                <line x1="80" y1="0" x2="80" y2="360"/><line x1="160" y1="0" x2="160" y2="360"/>
-                <line x1="240" y1="0" x2="240" y2="360"/><line x1="320" y1="0" x2="320" y2="360"/>
-                <line x1="400" y1="0" x2="400" y2="360"/>
+              <rect width="480" height="340" fill="url(#bg)"/>
+              <ellipse cx="240" cy="170" rx="220" ry="160" fill="url(#glow1)"/>
+              <!-- Grid -->
+              <g stroke="#0EA5E9" stroke-opacity="0.06" stroke-width="1">
+                <line x1="0" y1="85" x2="480" y2="85"/>
+                <line x1="0" y1="170" x2="480" y2="170"/>
+                <line x1="0" y1="255" x2="480" y2="255"/>
+                <line x1="96" y1="0" x2="96" y2="340"/>
+                <line x1="192" y1="0" x2="192" y2="340"/>
+                <line x1="288" y1="0" x2="288" y2="340"/>
+                <line x1="384" y1="0" x2="384" y2="340"/>
               </g>
-              <!-- Continent blobs - simplified stylised shapes -->
-              <!-- North America -->
-              <path d="M60 80 L120 70 L150 90 L160 130 L140 160 L110 170 L80 155 L60 130 Z" fill="#0EA5E9" fill-opacity="0.25" stroke="#0EA5E9" stroke-opacity="0.5" stroke-width="1.5"/>
+              <!-- North America - recognisable shape -->
+              <path d="M45,55 L95,48 L125,60 L140,85 L148,110 L138,140 L118,158 L95,162 L70,148 L50,125 L42,95 Z" fill="#0EA5E9" fill-opacity="0.18" stroke="#0EA5E9" stroke-opacity="0.55" stroke-width="1.5" stroke-linejoin="round"/>
+              <!-- Central America appendage -->
+              <path d="M118,158 L128,175 L122,188 L112,182 L115,168 Z" fill="#0EA5E9" fill-opacity="0.15" stroke="#0EA5E9" stroke-opacity="0.4" stroke-width="1"/>
               <!-- South America -->
-              <path d="M110 185 L150 178 L165 200 L160 240 L140 270 L115 265 L100 240 L105 210 Z" fill="#6366F1" fill-opacity="0.25" stroke="#6366F1" stroke-opacity="0.5" stroke-width="1.5"/>
-              <!-- Europe -->
-              <path d="M200 65 L240 60 L255 75 L250 100 L230 110 L205 105 L195 85 Z" fill="#0EA5E9" fill-opacity="0.3" stroke="#0EA5E9" stroke-opacity="0.6" stroke-width="1.5"/>
+              <path d="M108,200 L145,192 L165,208 L168,248 L155,285 L130,295 L105,282 L90,255 L88,225 L95,208 Z" fill="#6366F1" fill-opacity="0.2" stroke="#6366F1" stroke-opacity="0.55" stroke-width="1.5" stroke-linejoin="round"/>
+              <!-- Europe - compact -->
+              <path d="M198,52 L228,48 L242,58 L248,75 L238,90 L218,96 L200,88 L192,72 Z" fill="#0EA5E9" fill-opacity="0.22" stroke="#0EA5E9" stroke-opacity="0.6" stroke-width="1.5" stroke-linejoin="round"/>
+              <!-- Scandinavia nub -->
+              <path d="M210,48 L218,35 L225,38 L220,50 Z" fill="#0EA5E9" fill-opacity="0.18" stroke="#0EA5E9" stroke-opacity="0.4" stroke-width="1"/>
               <!-- Africa -->
-              <path d="M205 120 L245 115 L265 135 L268 185 L250 220 L220 225 L200 205 L195 165 L200 135 Z" fill="#6366F1" fill-opacity="0.2" stroke="#6366F1" stroke-opacity="0.45" stroke-width="1.5"/>
-              <!-- Asia -->
-              <path d="M265 60 L380 55 L400 80 L410 120 L390 145 L350 155 L300 150 L268 130 L260 95 Z" fill="#0EA5E9" fill-opacity="0.2" stroke="#0EA5E9" stroke-opacity="0.45" stroke-width="1.5"/>
+              <path d="M198,108 L240,104 L260,118 L265,155 L258,198 L240,228 L215,232 L194,215 L185,180 L186,145 L192,118 Z" fill="#6366F1" fill-opacity="0.18" stroke="#6366F1" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+              <!-- Middle East nub -->
+              <path d="M258,108 L280,105 L285,120 L270,128 L258,120 Z" fill="#0EA5E9" fill-opacity="0.15" stroke="#0EA5E9" stroke-opacity="0.35" stroke-width="1"/>
+              <!-- Asia - large -->
+              <path d="M268,48 L360,42 L400,55 L418,78 L420,108 L405,132 L370,145 L330,148 L295,142 L270,125 L262,95 L265,65 Z" fill="#0EA5E9" fill-opacity="0.18" stroke="#0EA5E9" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+              <!-- Indian subcontinent -->
+              <path d="M300,145 L322,142 L330,160 L322,188 L308,195 L296,180 L292,160 Z" fill="#0EA5E9" fill-opacity="0.15" stroke="#0EA5E9" stroke-opacity="0.4" stroke-width="1"/>
+              <!-- SE Asia / Indonesia rough -->
+              <path d="M358,148 L385,145 L392,158 L385,168 L365,165 L355,158 Z" fill="#0EA5E9" fill-opacity="0.15" stroke="#0EA5E9" stroke-opacity="0.35" stroke-width="1"/>
+              <!-- Japan islands -->
+              <ellipse cx="415" cy="88" rx="10" ry="22" fill="#F59E0B" fill-opacity="0.25" stroke="#F59E0B" stroke-opacity="0.65" stroke-width="1.5" transform="rotate(-15 415 88)"/>
               <!-- Australia -->
-              <path d="M355 200 L405 195 L420 215 L415 245 L390 255 L360 248 L348 228 Z" fill="#10B981" fill-opacity="0.25" stroke="#10B981" stroke-opacity="0.5" stroke-width="1.5"/>
-              <!-- Route line SG to Japan -->
-              <path d="M345 148 Q370 100 390 90" fill="none" stroke="#0EA5E9" stroke-width="2" stroke-dasharray="6 4" stroke-opacity="0.8"/>
-              <!-- Route line SG to Europe -->
-              <path d="M345 148 Q280 100 230 80" fill="none" stroke="#6366F1" stroke-width="1.5" stroke-dasharray="5 4" stroke-opacity="0.6"/>
-              <!-- Route line SG to Australia -->
-              <path d="M345 148 Q360 175 375 200" fill="none" stroke="#10B981" stroke-width="1.5" stroke-dasharray="5 4" stroke-opacity="0.6"/>
-              <!-- Singapore dot -->
-              <circle cx="345" cy="148" r="6" fill="#0EA5E9" fill-opacity="1"/>
-              <circle cx="345" cy="148" r="12" fill="#0EA5E9" fill-opacity="0.2"/>
-              <circle cx="345" cy="148" r="18" fill="#0EA5E9" fill-opacity="0.08"/>
+              <path d="M360,210 L415,205 L432,222 L428,258 L405,272 L370,268 L350,248 L348,225 Z" fill="#10B981" fill-opacity="0.22" stroke="#10B981" stroke-opacity="0.55" stroke-width="1.5" stroke-linejoin="round"/>
+              <!-- New Zealand -->
+              <ellipse cx="448" cy="268" rx="6" ry="14" fill="#10B981" fill-opacity="0.2" stroke="#10B981" stroke-opacity="0.45" stroke-width="1" transform="rotate(-20 448 268)"/>
+
+              <!-- Route lines -->
+              <!-- SG to JP -->
+              <path d="M370 158 Q392 120 412 92" fill="none" stroke="#F59E0B" stroke-width="1.8" stroke-dasharray="5 4" stroke-opacity="0.9"/>
+              <!-- SG to EU -->
+              <path d="M370 158 Q300 110 225 78" fill="none" stroke="#0EA5E9" stroke-width="1.5" stroke-dasharray="5 4" stroke-opacity="0.7"/>
+              <!-- SG to AU -->
+              <path d="M370 158 Q375 185 385 208" fill="none" stroke="#10B981" stroke-width="1.5" stroke-dasharray="5 4" stroke-opacity="0.7"/>
+
+              <!-- Singapore hub dot -->
+              <circle cx="370" cy="158" r="7" fill="#0EA5E9"/>
+              <circle cx="370" cy="158" r="13" fill="#0EA5E9" fill-opacity="0.18"/>
+              <circle cx="370" cy="158" r="20" fill="#0EA5E9" fill-opacity="0.07"/>
+              <text x="378" y="156" font-family="Inter,sans-serif" font-size="9" fill="#0EA5E9" font-weight="700">SG</text>
+
               <!-- Japan dot -->
-              <circle cx="395" cy="88" r="5" fill="#F59E0B"/>
-              <circle cx="395" cy="88" r="10" fill="#F59E0B" fill-opacity="0.2"/>
+              <circle cx="413" cy="90" r="5" fill="#F59E0B"/>
+              <circle cx="413" cy="90" r="11" fill="#F59E0B" fill-opacity="0.18"/>
+              <text x="420" y="88" font-family="Inter,sans-serif" font-size="9" fill="#F59E0B" font-weight="700">JP</text>
+
               <!-- London dot -->
-              <circle cx="218" cy="72" r="4" fill="#6366F1"/>
-              <circle cx="218" cy="72" r="9" fill="#6366F1" fill-opacity="0.2"/>
+              <circle cx="218" cy="72" r="4" fill="#A5B4FC"/>
+              <circle cx="218" cy="72" r="9" fill="#A5B4FC" fill-opacity="0.18"/>
+              <text x="224" y="70" font-family="Inter,sans-serif" font-size="9" fill="#A5B4FC" font-weight="700">UK</text>
+
               <!-- Sydney dot -->
-              <circle cx="390" cy="220" r="4" fill="#10B981"/>
-              <circle cx="390" cy="220" r="9" fill="#10B981" fill-opacity="0.2"/>
-              <!-- Label: SG -->
-              <text x="350" y="145" font-family="Inter,sans-serif" font-size="9" fill="#0EA5E9" font-weight="600">SG</text>
-              <!-- Label: JP -->
-              <text x="400" y="86" font-family="Inter,sans-serif" font-size="9" fill="#F59E0B" font-weight="600">JP</text>
-              <!-- Label: UK -->
-              <text x="222" y="70" font-family="Inter,sans-serif" font-size="9" fill="#A5B4FC" font-weight="600">UK</text>
-              <!-- Label: AU -->
-              <text x="394" y="218" font-family="Inter,sans-serif" font-size="9" fill="#10B981" font-weight="600">AU</text>
+              <circle cx="400" cy="245" r="4" fill="#10B981"/>
+              <circle cx="400" cy="245" r="9" fill="#10B981" fill-opacity="0.18"/>
+              <text x="406" y="243" font-family="Inter,sans-serif" font-size="9" fill="#10B981" font-weight="700">AU</text>
+
+              <!-- NYC dot -->
+              <circle cx="115" cy="98" r="4" fill="#F472B6"/>
+              <circle cx="115" cy="98" r="9" fill="#F472B6" fill-opacity="0.15"/>
+              <text x="120" y="97" font-family="Inter,sans-serif" font-size="9" fill="#F472B6" font-weight="700">NY</text>
+
               <!-- Bottom label -->
-              <text x="240" y="335" font-family="Inter,sans-serif" font-size="11" fill="rgba(255,255,255,0.3)" text-anchor="middle" letter-spacing="2">195 COUNTRIES · ANY PASSPORT</text>
+              <text x="240" y="325" font-family="Inter,sans-serif" font-size="10" fill="rgba(255,255,255,0.25)" text-anchor="middle" letter-spacing="2.5">195 COUNTRIES · ANY PASSPORT</text>
             </svg>
           </div>
           <!-- Floating approval badge -->
