@@ -186,7 +186,7 @@ select option { background: #1a2e42; color: var(--white); }
 .conf-label { font-size: 12px; color: var(--muted); }
 
 /* RESULT BODY */
-.result-body { background: var(--light-bg); padding: 48px; }
+.result-body { background: var(--light-bg); padding: 48px 24px; }
 .result-body-inner { max-width: 800px; margin: 0 auto; }
 
 /* SUMMARY */
@@ -199,8 +199,8 @@ select option { background: #1a2e42; color: var(--white); }
 .summary-text { font-size: 15px; color: var(--dark-txt); line-height: 1.75; font-weight: 400; }
 
 /* STAT GRID */
-.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
-.stat-card { background: var(--white); border-radius: 14px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); text-align: center; }
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; min-width: 0; }
+.stat-card { background: var(--white); border-radius: 14px; padding: 16px 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); text-align: center; min-width: 0; overflow: hidden; }
 .stat-icon { font-size: 22px; margin-bottom: 8px; }
 .stat-val { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 700; color: var(--dark-txt); line-height: 1.1; }
 .stat-val.cyan  { color: var(--cyan); }
@@ -230,6 +230,10 @@ select option { background: #1a2e42; color: var(--white); }
   transition: all 0.15s; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 .ext-link:hover { border-color: var(--cyan); background: rgba(14,165,233,0.04); }
+.ext-link-search { color: var(--muted); border-style: dashed; font-size: 12px; }
+.ext-link-search:hover { border-color: var(--cyan); color: var(--cyan); border-style: dashed; }
+.ext-link-search { border-style: dashed; color: var(--muted); }
+.ext-link-search:hover { border-color: var(--cyan); color: var(--cyan); }
 
 /* DISCLAIMER */
 .disclaimer {
@@ -536,9 +540,19 @@ function renderResult(d, passport, destination, purpose) {
 
   var linksHtml = "";
   var anchors = "";
-  if (d.official_url) anchors += "<a href='" + d.official_url + "' target='_blank' rel='noopener' class='ext-link'>↗ Official Source</a>";
-  if (d.embassy_url)  anchors += "<a href='" + d.embassy_url  + "' target='_blank' rel='noopener' class='ext-link'>↗ Embassy / Consulate</a>";
-  if (anchors)        linksHtml = "<div class='links-row'>" + anchors + "</div>";
+  var officialSearch = "https://www.google.com/search?q=" + encodeURIComponent(destination + " visa requirements " + passport + " official site");
+  var embassySearch = "https://www.google.com/search?q=" + encodeURIComponent(passport + " embassy in " + destination + " visa official");
+  // AI-provided links
+  if (d.official_url) {
+    anchors += "<a href='" + d.official_url + "' target='_blank' rel='noopener' class='ext-link'>↗ Official Source</a>";
+  }
+  if (d.embassy_url) {
+    anchors += "<a href='" + d.embassy_url + "' target='_blank' rel='noopener' class='ext-link'>↗ Embassy / Consulate</a>";
+  }
+  // Always show search fallbacks as safety net
+  anchors += "<a href='" + officialSearch + "' target='_blank' rel='noopener' class='ext-link ext-link-search'>🔍 Search Visa Info</a>";
+  anchors += "<a href='" + embassySearch + "' target='_blank' rel='noopener' class='ext-link ext-link-search'>🔍 Find Embassy</a>";
+  linksHtml = "<div class='links-row'>" + anchors + "</div>";
 
   var stayVal  = d.max_stay_days ? d.max_stay_days + " days" : (visaFree(d.visa_required) ? "Up to visa limit" : "Check embassy");
   var stayClass = d.max_stay_days ? "green" : "";
@@ -681,6 +695,22 @@ document.getElementById("checkBtn").addEventListener("click", function() {
     document.getElementById("checkBtn").disabled = false;
   });
 });
+
+// Validate link and fallback to search if dead
+function validateLink(e, el, fallbackUrl) {
+  var url = el.href;
+  var img = new Image();
+  img.onerror = function() {
+    // URL likely dead - open search fallback instead
+    el.href = fallbackUrl;
+    el.title = "Original link may be unavailable. Showing search results.";
+    el.style.opacity = "0.7";
+  };
+  // Quick HEAD check via fetch
+  fetch(url, { method: "HEAD", mode: "no-cors" }).catch(function() {
+    el.href = fallbackUrl;
+  });
+}
 
 populateSelects();
 </script>
