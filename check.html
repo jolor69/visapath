@@ -461,6 +461,13 @@ function populateSelects() {
     o2.value = c; o2.textContent = c;
     dd.appendChild(o2);
   }
+  // Pre-fill from URL params if present, e.g. ?destination=Japan&passport=Singapore
+  var params = new URLSearchParams(window.location.search);
+  var preDest = params.get("destination");
+  var prePass = params.get("passport");
+  if (preDest && COUNTRIES.indexOf(preDest) !== -1) dd.value = preDest;
+  if (prePass && COUNTRIES.indexOf(prePass) !== -1) pp.value = prePass;
+  checkSelects();
 }
 
 function getStatusConfig(vr) {
