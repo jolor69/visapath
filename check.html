@@ -271,6 +271,8 @@ select option { background: #1a2e42; color: var(--white); }
 .rate-limit-title { color: #F59E0B; font-size: 17px; font-weight: 600; margin-bottom: 8px; }
 .rate-limit-inner p { color: var(--muted); font-size: 14px; line-height: 1.65; }
 .checks-remaining { display: inline-flex; align-items: center; gap: 6px; background: rgba(14,165,233,0.1); border: 1px solid rgba(14,165,233,0.2); border-radius: 20px; padding: 4px 12px; font-size: 12px; color: var(--cyan); font-weight: 600; margin-top: 12px; }
+.plan-status-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(14,165,233,0.12); border: 1px solid rgba(14,165,233,0.3); border-radius: 24px; padding: 10px 22px; font-size: 15px; font-weight: 700; color: var(--cyan); letter-spacing: 0.01em; }
+.plan-status-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); flex-shrink: 0; }
 .error-box.visible { display: block; }
 .error-inner { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); border-radius: 16px; padding: 32px; text-align: center; }
 .error-title { color: #EF4444; font-size: 17px; font-weight: 600; margin-bottom: 8px; }
@@ -309,7 +311,7 @@ footer a { color: var(--cyan); text-decoration: none; }
   .hero-eyebrow-dot { animation: none; }
 }
 </style>
-<script src="https://www.paypal.com/sdk/js?client-id=AUdKs0YYl5l6pbWHazb-1nuSF7nn1qThPX6FEo8pztros6QMkYjBT6VAEbsPS7LdCTASMIg2dzd0YkKJ&currency=USD&intent=capture"></script>
+<script src="https://www.paypal.com/sdk/js?client-id=AZuZHUpK-cXVIG_dbEgt8aizmviiHITE8Dcq9WbQLH7wvmYu7kjP5If0QdX-REMbRWWMYfh82HF53KcB&currency=USD&intent=capture"></script>
 </head>
 <body>
 
@@ -403,8 +405,8 @@ footer a { color: var(--cyan); text-decoration: none; }
 <!-- RATE LIMIT -->
 <div class="rate-limit-box" id="rateLimitBox">
   <div class="rate-limit-inner">
-    <div class="rate-limit-title">Daily Limit Reached</div>
-    <p>Free users can check <strong>5 visa routes per day</strong>. Your limit resets in 24 hours.<br><br>Need this check right now? Unlock it instantly for <strong>$2</strong> — or upgrade to Traveller for unlimited access.</p>
+    <div class="rate-limit-title" id="rateLimitTitle">Monthly Limit Reached</div>
+    <p id="rateLimitMsg">Free users can check <strong>5 visa routes per month</strong>. Your limit resets in 30 days.<br><br>Need this check right now? Unlock it instantly for <strong>$2</strong> — or upgrade to Traveller for more checks every month.</p>
     <div id="paypalStatus" style="font-size:13px;color:var(--muted);margin-top:14px;display:none"></div>
     <div id="paypal-button-container" style="max-width:300px;margin:18px auto 0"></div>
     <div style="margin-top:16px">
@@ -413,15 +415,57 @@ footer a { color: var(--cyan); text-decoration: none; }
   </div>
 </div>
 
+<!-- PLAN STATUS (for active subscribers) -->
+<div style="display:none;text-align:center;padding:0 24px 20px" id="planStatusWrap"><span class="plan-status-badge" id="planStatusBar"><span class="dot"></span><span id="planStatusText"></span></span></div>
+
 <!-- RESULT -->
 <div class="result" id="result"></div>
 
 <footer>
   <p>VisaPath is part of <a href="https://neulab.xyz" target="_blank">NeuLab Inc.</a> &nbsp;·&nbsp; AI-assisted guidance only — always verify with the official embassy before travel.</p>
+  <p style="margin-top:8px"><a href="#" id="restoreAccessLink" style="color:var(--muted);text-decoration:underline;font-size:12px">Already subscribed on another device? Restore access</a></p>
 </footer>
 
 <script>
 var WORKER_URL = "https://visapath-worker.joe-lord-ai.workers.dev";
+
+var PLAN_LABELS = { traveller: "Traveller", nomad_pro: "Nomad Pro" };
+
+function updatePlanStatusBar(text) {
+  var wrap = document.getElementById("planStatusWrap");
+  var textEl = document.getElementById("planStatusText");
+  if (!wrap || !textEl) return;
+  if (text) {
+    textEl.textContent = text;
+    wrap.style.display = "block";
+  } else {
+    wrap.style.display = "none";
+  }
+}
+
+(function initPlanStatus() {
+  try {
+    var raw = localStorage.getItem("visapath_sub");
+    var sub = raw ? JSON.parse(raw) : null;
+    if (sub && sub.plan) {
+      var label = PLAN_LABELS[sub.plan] || sub.plan;
+      updatePlanStatusBar(label + " plan · up to " + sub.cap + " checks/month");
+    }
+  } catch (e) {}
+})();
+
+document.addEventListener("DOMContentLoaded", function() {
+  var restoreLink = document.getElementById("restoreAccessLink");
+  if (!restoreLink) return;
+  restoreLink.addEventListener("click", function(e) {
+    e.preventDefault();
+    var token = window.prompt("Paste your subscription access token (shown after checkout, or saved from your other device):");
+    if (!token) return;
+    localStorage.setItem("visapath_sub", JSON.stringify({ token: token.trim(), plan: "restored", cap: "?" }));
+    alert("Token saved. It will be validated on your next check.");
+    window.location.reload();
+  });
+});
 
 var COUNTRIES = [
   "Afghanistan","Albania","Algeria","Andorra","Angola","Antigua and Barbuda","Argentina",
@@ -659,6 +703,22 @@ function checkSelects() {
 document.getElementById("passport").addEventListener("change", checkSelects);
 document.getElementById("destination").addEventListener("change", checkSelects);
 
+function getStoredSub() {
+  try {
+    var raw = localStorage.getItem("visapath_sub");
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function showRateLimitBox(title, message) {
+  document.getElementById("rateLimitTitle").textContent = title;
+  document.getElementById("rateLimitMsg").innerHTML = message;
+  document.getElementById("rateLimitBox").className = "rate-limit-box visible";
+  document.getElementById("rateLimitBox").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
 function performCheck(passport, destination, purpose, paidToken) {
   hideAll();
   setLoading(true);
@@ -667,20 +727,26 @@ function performCheck(passport, destination, purpose, paidToken) {
   var payload = { passport: passport, destination: destination, purpose: purpose };
   if (paidToken) payload.paid_token = paidToken;
 
+  var sub = getStoredSub();
+  if (sub && sub.token) payload.sub_token = sub.token;
+
   return fetch(WORKER_URL + "/visa-check", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   })
   .then(function(r) {
-    if (r.status === 429) {
-      return r.json().then(function(j) { throw { isRateLimit: true, data: j }; });
+    if (r.status === 429 || r.status === 402 || r.status === 400) {
+      return r.json().then(function(j) { throw { isBlocked: true, status: r.status, data: j }; });
     }
     return r.json();
   })
   .then(function(json) {
     setLoading(false);
     if (!json.ok || !json.data) { showError(json.error || "Could not retrieve visa requirements."); return; }
+    if (json.meta && PLAN_LABELS[json.meta.plan]) {
+      updatePlanStatusBar(PLAN_LABELS[json.meta.plan] + " plan · " + json.meta.remaining + "/" + json.meta.limit + " checks left this cycle");
+    }
     renderResult(json.data, passport, destination, purpose);
     var el = document.getElementById("result");
     el.className = "result visible";
@@ -688,9 +754,20 @@ function performCheck(passport, destination, purpose, paidToken) {
   })
   .catch(function(err) {
     setLoading(false);
-    if (err && err.isRateLimit) {
-      document.getElementById("rateLimitBox").className = "rate-limit-box visible";
-      document.getElementById("rateLimitBox").scrollIntoView({ behavior: "smooth", block: "center" });
+    if (err && err.isBlocked) {
+      var errCode = err.data && err.data.error;
+      var msg = (err.data && err.data.message) || "Please try again.";
+      if (errCode === "plan_limit_reached") {
+        showRateLimitBox("Plan Limit Reached", msg + "<br><br>Need this check right now? Unlock it instantly for <strong>$2</strong>, or upgrade your plan.");
+      } else if (errCode === "subscription_inactive") {
+        localStorage.removeItem("visapath_sub");
+        showRateLimitBox("Subscription Inactive", msg);
+      } else if (errCode === "invalid_subscription_token") {
+        localStorage.removeItem("visapath_sub");
+        showRateLimitBox("Subscription Not Found", msg);
+      } else {
+        showRateLimitBox("Monthly Limit Reached", msg + "<br><br>Need this check right now? Unlock it instantly for <strong>$2</strong> — or upgrade to Traveller for more checks every month.");
+      }
     } else {
       showError("Network error — please check your connection and try again.");
     }

@@ -296,6 +296,7 @@ footer{background:var(--dark);border-top:1px solid var(--border-d);padding:64px 
   .feat-card:hover,.route-card:hover,.btn-white:hover{transform:none}
 }
 </style>
+<script src="https://www.paypal.com/sdk/js?client-id=AZuZHUpK-cXVIG_dbEgt8aizmviiHITE8Dcq9WbQLH7wvmYu7kjP5If0QdX-REMbRWWMYfh82HF53KcB&vault=true&intent=subscription"></script>
 </head>
 <body>
 
@@ -651,7 +652,7 @@ footer{background:var(--dark);border-top:1px solid var(--border-d);padding:64px 
         <div class="price-name dark">Traveller</div>
         <div class="price-desc dark">For frequent travellers</div>
         <div class="price-amount dark">$2<span style="font-size:22px;font-weight:400">/trip</span></div>
-        <div class="price-period dark">Or $9/month unlimited</div>
+        <div class="price-period dark">Or $9/month · 100 checks/mo</div>
         <div class="price-divider dark"></div>
         <ul class="price-features">
           <li class="yes dk"><span class="pf-check">✓</span>Everything in Explorer</li>
@@ -661,14 +662,16 @@ footer{background:var(--dark);border-top:1px solid var(--border-d);padding:64px 
           <li class="yes dk"><span class="pf-check">✓</span>Processing time alerts</li>
           <li class="yes dk"><span class="pf-check">✓</span>Wandr itinerary sync</li>
         </ul>
-        <a href="./check.html" class="price-btn-primary">Get Started →</a>
+        <a href="./check.html" class="price-btn-primary">Pay $2 per trip →</a>
+        <div id="subscribeStatusTraveller" style="font-size:12px;color:var(--txt-mid);margin-top:12px;display:none;text-align:center"></div>
+        <div id="paypal-sub-traveller" style="margin-top:12px"></div>
       </div>
 
       <div class="price-card enterprise">
         <div class="price-name light">Nomad Pro</div>
         <div class="price-desc light">For digital nomads & teams</div>
         <div class="price-amount light">$19<span style="font-size:22px;font-weight:400">/mo</span></div>
-        <div class="price-period light">Per user · Cancel anytime</div>
+        <div class="price-period light">400 checks/mo shared · up to 5 seats</div>
         <div class="price-divider light"></div>
         <ul class="price-features">
           <li class="yes"><span class="pf-check">✓</span>Everything in Traveller</li>
@@ -678,7 +681,8 @@ footer{background:var(--dark);border-top:1px solid var(--border-d);padding:64px 
           <li class="yes"><span class="pf-check">✓</span>Priority email support</li>
           <li class="yes"><span class="pf-check">✓</span>API access</li>
         </ul>
-        <a href="./check.html" class="price-btn-outline">Contact Us</a>
+        <div id="subscribeStatusNomad" style="font-size:12px;color:var(--txt-muted);margin-top:4px;display:none;text-align:center"></div>
+        <div id="paypal-sub-nomad" style="margin-top:12px"></div>
       </div>
 
     </div>
@@ -829,6 +833,64 @@ window.addEventListener("scroll", function() {
     }
   }
 });
+
+/* Subscription checkout (Traveller / Nomad Pro) */
+var WORKER_URL = "https://visapath-worker.joe-lord-ai.workers.dev";
+var PLAN_IDS = {
+  traveller: "P-88G05256MP579394MNJR4V2Q",
+  nomad_pro: "P-9FJ341183H741142NNJR4V2Y"
+};
+
+function setSubStatus(elId, msg, isError) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  el.textContent = msg || "";
+  el.style.display = msg ? "block" : "none";
+  el.style.color = isError ? "#EF4444" : "";
+}
+
+function renderSubscribeButton(containerId, statusId, plan, planId) {
+  var container = document.getElementById(containerId);
+  if (!container || !window.paypal) return;
+
+  paypal.Buttons({
+    style: { layout: "horizontal", color: plan === "traveller" ? "gold" : "blue", shape: "pill", label: "subscribe", height: 40 },
+    createSubscription: function(data, actions) {
+      return actions.subscription.create({ plan_id: planId });
+    },
+    onApprove: function(data) {
+      setSubStatus(statusId, "Confirming subscription…");
+      return fetch(WORKER_URL + "/paypal/verify-subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscriptionID: data.subscriptionID })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(result) {
+        if (!result.ok || !result.token) {
+          setSubStatus(statusId, "Could not activate subscription. Please contact support.", true);
+          return;
+        }
+        localStorage.setItem("visapath_sub", JSON.stringify({
+          token: result.token, plan: result.plan, cap: result.cap
+        }));
+        setSubStatus(statusId, "Subscribed! Redirecting…");
+        window.location.href = "./check.html";
+      })
+      .catch(function() {
+        setSubStatus(statusId, "Could not activate subscription. Please contact support.", true);
+      });
+    },
+    onError: function() {
+      setSubStatus(statusId, "PayPal checkout failed. Please try again.", true);
+    }
+  }).render("#" + containerId);
+}
+
+if (window.paypal) {
+  renderSubscribeButton("paypal-sub-traveller", "subscribeStatusTraveller", "traveller", PLAN_IDS.traveller);
+  renderSubscribeButton("paypal-sub-nomad", "subscribeStatusNomad", "nomad_pro", PLAN_IDS.nomad_pro);
+}
 </script>
 </body>
 </html>
