@@ -309,6 +309,7 @@ footer a { color: var(--cyan); text-decoration: none; }
   .hero-eyebrow-dot { animation: none; }
 }
 </style>
+<script src="https://www.paypal.com/sdk/js?client-id=AUdKs0YYl5l6pbWHazb-1nuSF7nn1qThPX6FEo8pztros6QMkYjBT6VAEbsPS7LdCTASMIg2dzd0YkKJ&currency=USD&intent=capture"></script>
 </head>
 <body>
 
@@ -403,9 +404,11 @@ footer a { color: var(--cyan); text-decoration: none; }
 <div class="rate-limit-box" id="rateLimitBox">
   <div class="rate-limit-inner">
     <div class="rate-limit-title">Daily Limit Reached</div>
-    <p>Free users can check <strong>5 visa routes per day</strong>. Your limit resets in 24 hours.<br><br>Need more checks? Upgrade to Traveller for unlimited access.</p>
-    <div style="margin-top:20px">
-      <a href="./index.html#pricing" class="price-btn-primary" style="display:inline-block;padding:12px 28px;text-decoration:none;border-radius:40px;background:linear-gradient(135deg,#0EA5E9,#6366F1);color:#fff;font-weight:600;font-size:14px;">View Plans</a>
+    <p>Free users can check <strong>5 visa routes per day</strong>. Your limit resets in 24 hours.<br><br>Need this check right now? Unlock it instantly for <strong>$2</strong> — or upgrade to Traveller for unlimited access.</p>
+    <div id="paypalStatus" style="font-size:13px;color:var(--muted);margin-top:14px;display:none"></div>
+    <div id="paypal-button-container" style="max-width:300px;margin:18px auto 0"></div>
+    <div style="margin-top:16px">
+      <a href="./index.html#pricing" class="price-btn-outline" style="display:inline-block;padding:10px 24px;text-decoration:none;border-radius:40px;border:1.5px solid var(--border-d,#333);color:inherit;font-weight:500;font-size:13px;">View Plans</a>
     </div>
   </div>
 </div>
@@ -656,19 +659,18 @@ function checkSelects() {
 document.getElementById("passport").addEventListener("change", checkSelects);
 document.getElementById("destination").addEventListener("change", checkSelects);
 
-document.getElementById("checkBtn").addEventListener("click", function() {
-  var passport    = document.getElementById("passport").value;
-  var destination = document.getElementById("destination").value;
-  if (!passport || !destination) return;
-
+function performCheck(passport, destination, purpose, paidToken) {
   hideAll();
   setLoading(true);
   document.getElementById("checkBtn").disabled = true;
 
-  fetch(WORKER_URL + "/visa-check", {
+  var payload = { passport: passport, destination: destination, purpose: purpose };
+  if (paidToken) payload.paid_token = paidToken;
+
+  return fetch(WORKER_URL + "/visa-check", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ passport: passport, destination: destination, purpose: selectedPurpose })
+    body: JSON.stringify(payload)
   })
   .then(function(r) {
     if (r.status === 429) {
@@ -679,12 +681,7 @@ document.getElementById("checkBtn").addEventListener("click", function() {
   .then(function(json) {
     setLoading(false);
     if (!json.ok || !json.data) { showError(json.error || "Could not retrieve visa requirements."); return; }
-    // Show remaining checks badge if low
-    if (json.meta && json.meta.remaining <= 2) {
-      var rem = json.meta.remaining;
-      console.log("Checks remaining today: " + rem);
-    }
-    renderResult(json.data, passport, destination, selectedPurpose);
+    renderResult(json.data, passport, destination, purpose);
     var el = document.getElementById("result");
     el.className = "result visible";
     el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -701,7 +698,65 @@ document.getElementById("checkBtn").addEventListener("click", function() {
   .finally(function() {
     document.getElementById("checkBtn").disabled = false;
   });
+}
+
+document.getElementById("checkBtn").addEventListener("click", function() {
+  var passport    = document.getElementById("passport").value;
+  var destination = document.getElementById("destination").value;
+  if (!passport || !destination) return;
+  performCheck(passport, destination, selectedPurpose, null);
 });
+
+function setPaypalStatus(msg, isError) {
+  var el = document.getElementById("paypalStatus");
+  el.textContent = msg || "";
+  el.style.display = msg ? "block" : "none";
+  el.style.color = isError ? "#EF4444" : "var(--muted)";
+}
+
+if (window.paypal) {
+  paypal.Buttons({
+    style: { layout: "horizontal", color: "blue", shape: "pill", label: "pay", height: 40 },
+    createOrder: function() {
+      setPaypalStatus("");
+      return fetch(WORKER_URL + "/paypal/create-order", { method: "POST" })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.id) throw new Error("no order id");
+          return data.id;
+        })
+        .catch(function() {
+          setPaypalStatus("Could not start PayPal checkout. Please try again.", true);
+          throw new Error("create-order failed");
+        });
+    },
+    onApprove: function(data) {
+      setPaypalStatus("Confirming payment…");
+      return fetch(WORKER_URL + "/paypal/capture-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderID: data.orderID })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(result) {
+        if (!result.ok || !result.token) {
+          setPaypalStatus("Payment could not be confirmed. Please contact support.", true);
+          return;
+        }
+        setPaypalStatus("Payment confirmed — unlocking your check…");
+        var passport    = document.getElementById("passport").value;
+        var destination = document.getElementById("destination").value;
+        performCheck(passport, destination, selectedPurpose, result.token);
+      })
+      .catch(function() {
+        setPaypalStatus("Payment could not be confirmed. Please contact support.", true);
+      });
+    },
+    onError: function() {
+      setPaypalStatus("PayPal checkout failed. Please try again.", true);
+    }
+  }).render("#paypal-button-container");
+}
 
 // Validate link and fallback to search if dead
 function validateLink(e, el, fallbackUrl) {

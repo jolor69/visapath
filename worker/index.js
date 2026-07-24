@@ -8,6 +8,11 @@ const CORS_HEADERS = {
 var FREE_DAILY_LIMIT = 5;
 var WINDOW_SECONDS = 86400; // 24 hours
 
+// PayPal config (sandbox)
+var PAYPAL_API_BASE = "https://api-m.sandbox.paypal.com";
+var PER_TRIP_PRICE_USD = "2.00";
+var PAID_TOKEN_TTL_SECONDS = 3600; // 1 hour to redeem after payment
+
 var SYSTEM_PROMPT = "You are VisaPath, a visa requirements data API. You MUST respond with raw JSON only. No markdown. No backticks. No explanation. No preamble. Your entire response must be a single valid JSON object that can be passed directly to JSON.parse().\n\nCRITICAL URL RULES:\n- official_url: Must be the REAL, LIVE official government page for visa info. Use well-known domains only: canada.ca, gov.uk, homeaffairs.gov.au, mfa.gov.sg, mofa.go.jp, mfa.gov.cn, state.gov, etc. NEVER use subdomains like canadainternational.gc.ca or missions.gc.ca as they are often retired. When in doubt about a URL, set it to null rather than guessing.\n- embassy_url: Must be the REAL, LIVE embassy or consulate website in the passport holder's country. Use the main embassy domain. If unsure, set to null.\n- NEVER fabricate or guess URLs. A null URL is better than a dead link.\n\nKNOWN CORRECT URLS (always use these):\n- Canada visa info: https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada.html\n- UK visa info: https://www.gov.uk/check-uk-visa\n- Australia visa info: https://immi.homeaffairs.gov.au\n- USA visa info: https://travel.state.gov/content/travel/en/us-visas.html\n- Japan visa info: https://www.mofa.go.jp/j_info/visit/visa/index.html\n- Singapore MFA: https://www.mfa.gov.sg\n- Schengen/EU: https://home-affairs.ec.europa.eu/policies/schengen-borders-and-visa_en\n\nRespond ONLY with this exact JSON structure:\n{\n  \"visa_required\": true | false | \"visa_on_arrival\" | \"e_visa\" | \"unknown\",\n  \"visa_type\": \"string or null\",\n  \"max_stay_days\": number or null,\n  \"cost_usd\": number or null,\n  \"cost_local\": \"string or null\",\n  \"processing_days_min\": number or null,\n  \"processing_days_max\": number or null,\n  \"entry_type\": \"single\" | \"multiple\" | \"varies\" | null,\n  \"validity_days\": number or null,\n  \"documents_required\": [\"array of strings\"],\n  \"special_notes\": [\"array of important notes, warnings, or conditions\"],\n  \"official_url\": \"string or null\",\n  \"embassy_url\": \"string or null\",\n  \"last_known_update\": \"string\",\n  \"confidence\": \"high\" | \"medium\" | \"low\",\n  \"summary\": \"2-3 sentence plain English summary\"\n}";
 
 function getClientIP(request) {
@@ -56,9 +61,160 @@ async function checkRateLimit(env, ip) {
   return { allowed: true, remaining: FREE_DAILY_LIMIT - data.count, reset: resetAt };
 }
 
+async function getPayPalAccessToken(env) {
+  var creds = btoa(env.PAYPAL_CLIENT_ID + ":" + env.PAYPAL_SECRET);
+  var res = await fetch(PAYPAL_API_BASE + "/v1/oauth2/token", {
+    method: "POST",
+    headers: {
+      "Authorization": "Basic " + creds,
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: "grant_type=client_credentials"
+  });
+  if (!res.ok) {
+    throw new Error("PayPal auth failed: " + (await res.text()));
+  }
+  var data = await res.json();
+  return data.access_token;
+}
+
+async function handlePayPalCreateOrder(request, env) {
+  var accessToken;
+  try {
+    accessToken = await getPayPalAccessToken(env);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: "PayPal unavailable" }), {
+      status: 502,
+      headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
+    });
+  }
+
+  var orderRes = await fetch(PAYPAL_API_BASE + "/v2/checkout/orders", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + accessToken,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      intent: "CAPTURE",
+      purchase_units: [{
+        description: "VisaPath - 1 trip check",
+        amount: { currency_code: "USD", value: PER_TRIP_PRICE_USD }
+      }]
+    })
+  });
+
+  if (!orderRes.ok) {
+    return new Response(JSON.stringify({ error: "Could not create PayPal order" }), {
+      status: 502,
+      headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
+    });
+  }
+
+  var order = await orderRes.json();
+  return new Response(JSON.stringify({ id: order.id }), {
+    status: 200,
+    headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
+  });
+}
+
+async function handlePayPalCaptureOrder(request, env) {
+  var body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return new Response(JSON.stringify({ error: "Invalid request body" }), {
+      status: 400,
+      headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
+    });
+  }
+
+  var orderID = body.orderID;
+  if (!orderID) {
+    return new Response(JSON.stringify({ error: "orderID is required" }), {
+      status: 400,
+      headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
+    });
+  }
+
+  var accessToken;
+  try {
+    accessToken = await getPayPalAccessToken(env);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: "PayPal unavailable" }), {
+      status: 502,
+      headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
+    });
+  }
+
+  var captureRes = await fetch(PAYPAL_API_BASE + "/v2/checkout/orders/" + orderID + "/capture", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + accessToken,
+      "Content-Type": "application/json"
+    }
+  });
+
+  var captureData = await captureRes.json();
+  var status = captureData.status;
+  var completed = status === "COMPLETED" ||
+    (captureData.purchase_units &&
+     captureData.purchase_units[0] &&
+     captureData.purchase_units[0].payments &&
+     captureData.purchase_units[0].payments.captures &&
+     captureData.purchase_units[0].payments.captures[0] &&
+     captureData.purchase_units[0].payments.captures[0].status === "COMPLETED");
+
+  if (!captureRes.ok || !completed) {
+    return new Response(JSON.stringify({ error: "Payment not completed", status: status || "unknown" }), {
+      status: 402,
+      headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
+    });
+  }
+
+  var token = crypto.randomUUID();
+  if (env.VISAPATH_KV) {
+    try {
+      await env.VISAPATH_KV.put("paid:" + token, "1", { expirationTtl: PAID_TOKEN_TTL_SECONDS });
+    } catch (e) {
+      // KV write failed - payment still succeeded, but token can't be redeemed
+      return new Response(JSON.stringify({ error: "Payment captured but could not issue access" }), {
+        status: 500,
+        headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
+      });
+    }
+  }
+
+  return new Response(JSON.stringify({ ok: true, token: token }), {
+    status: 200,
+    headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
+  });
+}
+
+async function redeemPaidToken(env, token) {
+  if (!token || !env.VISAPATH_KV) return false;
+  var key = "paid:" + token;
+  var val = await env.VISAPATH_KV.get(key);
+  if (!val) return false;
+  await env.VISAPATH_KV.delete(key);
+  return true;
+}
+
 async function handleVisaCheck(request, env) {
   var ip = getClientIP(request);
-  var rateCheck = await checkRateLimit(env, ip);
+
+  // Allow a paid ($2/trip) token to bypass the free daily limit
+  var bodyForToken;
+  try {
+    bodyForToken = await request.clone().json();
+  } catch (e) {
+    bodyForToken = {};
+  }
+  var paidAccess = await redeemPaidToken(env, bodyForToken.paid_token);
+
+  var rateCheck = paidAccess
+    ? { allowed: true, remaining: FREE_DAILY_LIMIT, reset: 0 }
+    : await checkRateLimit(env, ip);
 
   if (!rateCheck.allowed) {
     var resetDate = new Date(rateCheck.reset * 1000).toUTCString();
@@ -188,6 +344,14 @@ export default {
 
     if (url.pathname === "/visa-check" && request.method === "POST") {
       return handleVisaCheck(request, env);
+    }
+
+    if (url.pathname === "/paypal/create-order" && request.method === "POST") {
+      return handlePayPalCreateOrder(request, env);
+    }
+
+    if (url.pathname === "/paypal/capture-order" && request.method === "POST") {
+      return handlePayPalCaptureOrder(request, env);
     }
 
     if (url.pathname === "/health") {
