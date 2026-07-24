@@ -177,6 +177,11 @@ select option { background: #1a2e42; color: var(--white); }
 .status-pill.required{ background: rgba(239,68,68,0.15);  border: 1px solid rgba(239,68,68,0.35);  color: #EF4444; }
 .status-pill.unknown { background: rgba(148,163,184,0.15);border: 1px solid rgba(148,163,184,0.35);color: #94A3B8; }
 .status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.result-status-col { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; flex-shrink: 0; }
+.result-quota { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); padding: 6px 14px; border-radius: 20px; white-space: nowrap; }
+.result-quota .rq-num { color: var(--cyan); font-weight: 700; }
+.result-quota.low { color: #F59E0B; background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.35); }
+.result-quota.low .rq-num { color: #F59E0B; }
 .conf-row { display: flex; align-items: center; gap: 8px; margin-top: 20px; }
 .conf-bar-wrap { flex: 1; max-width: 160px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
 .conf-bar { height: 100%; border-radius: 2px; }
@@ -565,10 +570,21 @@ function statEntry(d) {
   return { val: "See visa terms", cls: "", sub: "Depends on visa type" };
 }
 
-function renderResult(d, passport, destination, purpose) {
+function buildQuotaHtml(meta) {
+  if (!meta || typeof meta.remaining !== "number" || typeof meta.limit !== "number") return "";
+  if (meta.plan === "per_trip") return "";
+  var cycleLabel = meta.plan === "traveller" || meta.plan === "nomad_pro" ? "this cycle" : "this month";
+  var low = meta.remaining <= Math.max(1, Math.round(meta.limit * 0.15));
+  return "<div class='result-quota" + (low ? " low" : "") + "'>" +
+    "<span class='rq-num'>" + meta.remaining + "/" + meta.limit + "</span> checks left " + cycleLabel +
+  "</div>";
+}
+
+function renderResult(d, passport, destination, purpose, meta) {
   var sc = getStatusConfig(d.visa_required);
   var confCls = d.confidence || "medium";
   var confLabels = { high: "High confidence", medium: "Medium confidence", low: "Low confidence — verify carefully" };
+  var quotaHtml = buildQuotaHtml(meta);
 
   var docsHtml = "";
   if (d.documents_required && d.documents_required.length) {
@@ -625,7 +641,10 @@ function renderResult(d, passport, destination, purpose) {
             "<div class='result-title'>" + passport + " to " + destination + "</div>" +
             "<div class='result-purpose'>" + purposeCap + " travel</div>" +
           "</div>" +
-          "<div class='status-pill " + sc.cls + "'><span class='status-dot'></span>" + sc.label + "</div>" +
+          "<div class='result-status-col'>" +
+            "<div class='status-pill " + sc.cls + "'><span class='status-dot'></span>" + sc.label + "</div>" +
+            quotaHtml +
+          "</div>" +
         "</div>" +
         "<div class='conf-row'>" +
           "<div class='conf-bar-wrap'><div class='conf-bar " + confCls + "'></div></div>" +
@@ -747,7 +766,7 @@ function performCheck(passport, destination, purpose, paidToken) {
     if (json.meta && PLAN_LABELS[json.meta.plan]) {
       updatePlanStatusBar(PLAN_LABELS[json.meta.plan] + " plan · " + json.meta.remaining + "/" + json.meta.limit + " checks left this cycle");
     }
-    renderResult(json.data, passport, destination, purpose);
+    renderResult(json.data, passport, destination, purpose, json.meta);
     var el = document.getElementById("result");
     el.className = "result visible";
     el.scrollIntoView({ behavior: "smooth", block: "start" });
