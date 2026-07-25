@@ -637,7 +637,7 @@ footer{background:var(--dark);border-top:1px solid var(--border-d);padding:64px 
         <div class="price-period light">Always free · No credit card</div>
         <div class="price-divider light"></div>
         <ul class="price-features">
-          <li class="yes"><span class="pf-check">✓</span>Visa requirement lookups</li>
+          <li class="yes"><span class="pf-check">✓</span>5 visa checks / month</li>
           <li class="yes"><span class="pf-check">✓</span>195 countries covered</li>
           <li class="yes"><span class="pf-check">✓</span>5 travel purposes</li>
           <li class="yes"><span class="pf-check">✓</span>Official source links</li>
@@ -651,8 +651,8 @@ footer{background:var(--dark);border-top:1px solid var(--border-d);padding:64px 
         <span class="price-badge">Most Popular</span>
         <div class="price-name dark">Traveller</div>
         <div class="price-desc dark">For frequent travellers</div>
-        <div class="price-amount dark">$2<span style="font-size:22px;font-weight:400">/trip</span></div>
-        <div class="price-period dark">Or $9/month · 100 checks/mo</div>
+        <div class="price-amount dark">$1<span style="font-size:22px;font-weight:400">/trip</span></div>
+        <div class="price-period dark">Or $4.50/month · 100 checks/mo</div>
         <div class="price-divider dark"></div>
         <ul class="price-features">
           <li class="yes dk"><span class="pf-check">✓</span>Everything in Explorer</li>
@@ -662,7 +662,7 @@ footer{background:var(--dark);border-top:1px solid var(--border-d);padding:64px 
           <li class="yes dk"><span class="pf-check">✓</span>Processing time alerts</li>
           <li class="yes dk"><span class="pf-check">✓</span>Wandr itinerary sync</li>
         </ul>
-        <a href="./check.html" class="price-btn-primary">Pay $2 per trip →</a>
+        <a href="./check.html" class="price-btn-primary">Pay $1 per trip →</a>
         <div id="subscribeStatusTraveller" style="font-size:12px;color:var(--txt-mid);margin-top:12px;display:none;text-align:center"></div>
         <div id="paypal-sub-traveller" style="margin-top:12px"></div>
       </div>
@@ -670,7 +670,7 @@ footer{background:var(--dark);border-top:1px solid var(--border-d);padding:64px 
       <div class="price-card enterprise">
         <div class="price-name light">Nomad Pro</div>
         <div class="price-desc light">For digital nomads & teams</div>
-        <div class="price-amount light">$19<span style="font-size:22px;font-weight:400">/mo</span></div>
+        <div class="price-amount light">$9.50<span style="font-size:22px;font-weight:400">/mo</span></div>
         <div class="price-period light">400 checks/mo shared · up to 5 seats</div>
         <div class="price-divider light"></div>
         <ul class="price-features">
@@ -837,8 +837,8 @@ window.addEventListener("scroll", function() {
 /* Subscription checkout (Traveller / Nomad Pro) */
 var WORKER_URL = "https://visapath-worker.joe-lord-ai.workers.dev";
 var PLAN_IDS = {
-  traveller: "P-88G05256MP579394MNJR4V2Q",
-  nomad_pro: "P-9FJ341183H741142NNJR4V2Y"
+  traveller: "P-6T740367ME326160XNJSBAEQ",
+  nomad_pro: "P-2TP27270SN424254HNJSBAEY"
 };
 
 function setSubStatus(elId, msg, isError) {
