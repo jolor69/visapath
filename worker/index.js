@@ -19,6 +19,10 @@ var PLAN_CONFIG = {
   "P-2TP27270SN424254HNJSBAEY": { name: "nomad_pro", cap: 400 }
 };
 
+// Multi-country trip analysis (Traveller / Nomad Pro only)
+var MIN_TRIP_LEGS = 2;
+var MAX_TRIP_LEGS = 8;
+
 var SYSTEM_PROMPT = "You are VisaPath, a visa requirements data API. You MUST respond with raw JSON only. No markdown. No backticks. No explanation. No preamble. Your entire response must be a single valid JSON object that can be passed directly to JSON.parse().\n\nCRITICAL URL RULES:\n- official_url: Must be the REAL, LIVE official government page for visa info. Use well-known domains only: canada.ca, gov.uk, homeaffairs.gov.au, mfa.gov.sg, mofa.go.jp, mfa.gov.cn, state.gov, etc. NEVER use subdomains like canadainternational.gc.ca or missions.gc.ca as they are often retired. When in doubt about a URL, set it to null rather than guessing.\n- embassy_url: Must be the REAL, LIVE embassy or consulate website in the passport holder's country. Use the main embassy domain. If unsure, set to null.\n- NEVER fabricate or guess URLs. A null URL is better than a dead link.\n\nKNOWN CORRECT URLS (always use these):\n- Canada visa info: https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada.html\n- UK visa info: https://www.gov.uk/check-uk-visa\n- Australia visa info: https://immi.homeaffairs.gov.au\n- USA visa info: https://travel.state.gov/content/travel/en/us-visas.html\n- Japan visa info: https://www.mofa.go.jp/j_info/visit/visa/index.html\n- Singapore MFA: https://www.mfa.gov.sg\n- Schengen/EU: https://home-affairs.ec.europa.eu/policies/schengen-borders-and-visa_en\n\nRespond ONLY with this exact JSON structure:\n{\n  \"visa_required\": true | false | \"visa_on_arrival\" | \"e_visa\" | \"unknown\",\n  \"visa_type\": \"string or null\",\n  \"max_stay_days\": number or null,\n  \"cost_usd\": number or null,\n  \"cost_local\": \"string or null\",\n  \"processing_days_min\": number or null,\n  \"processing_days_max\": number or null,\n  \"entry_type\": \"single\" | \"multiple\" | \"varies\" | null,\n  \"validity_days\": number or null,\n  \"documents_required\": [\"array of strings\"],\n  \"special_notes\": [\"array of important notes, warnings, or conditions\"],\n  \"official_url\": \"string or null\",\n  \"embassy_url\": \"string or null\",\n  \"last_known_update\": \"string\",\n  \"confidence\": \"high\" | \"medium\" | \"low\",\n  \"summary\": \"2-3 sentence plain English summary\"\n}";
 
 function getClientIP(request) {
@@ -381,6 +385,60 @@ async function checkSubQuota(env, subToken) {
   };
 }
 
+async function performVisaAICheck(env, passport, destination, purpose) {
+  var userPrompt = "Passport: " + passport + "\nDestination: " + destination + "\nPurpose: " + purpose + "\n\nProvide current visa requirements for this combination. IMPORTANT: Respond with raw JSON only. No markdown, no backticks, no explanation — just the JSON object.";
+
+  var payload = {
+    model: "deepseek/deepseek-chat",
+    max_tokens: 1500,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: userPrompt }
+    ]
+  };
+
+  var orResponse;
+  try {
+    orResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + env.OPENROUTER_API_KEY,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://visapath.neulab.xyz",
+        "X-Title": "VisaPath by NeuLab"
+      },
+      body: JSON.stringify(payload)
+    });
+  } catch (e) {
+    return { ok: false, error: "AI service unreachable" };
+  }
+
+  if (!orResponse.ok) {
+    var errText = await orResponse.text();
+    return { ok: false, error: "AI service error", detail: errText };
+  }
+
+  var orData = await orResponse.json();
+  var rawContent = "";
+  try {
+    rawContent = orData.choices[0].message.content;
+  } catch (e) {
+    return { ok: false, error: "Unexpected AI response shape" };
+  }
+
+  var cleaned = rawContent.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+
+  try {
+    return { ok: true, data: JSON.parse(cleaned) };
+  } catch (e) {
+    try {
+      return { ok: true, data: JSON.parse(cleaned.replace(/'/g, '"')) };
+    } catch (e2) {
+      return { ok: false, error: "Could not parse AI response", raw: rawContent };
+    }
+  }
+}
+
 async function handleVisaCheck(request, env) {
   var ip = getClientIP(request);
 
@@ -478,74 +536,17 @@ async function handleVisaCheck(request, env) {
     });
   }
 
-  var userPrompt = "Passport: " + passport + "\nDestination: " + destination + "\nPurpose: " + purpose + "\n\nProvide current visa requirements for this combination. IMPORTANT: Respond with raw JSON only. No markdown, no backticks, no explanation — just the JSON object.";
-
-  var payload = {
-    model: "deepseek/deepseek-chat",
-    max_tokens: 1500,
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: userPrompt }
-    ]
-  };
-
-  var orResponse;
-  try {
-    orResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer " + env.OPENROUTER_API_KEY,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://visapath.neulab.xyz",
-        "X-Title": "VisaPath by NeuLab"
-      },
-      body: JSON.stringify(payload)
-    });
-  } catch (e) {
-    return new Response(JSON.stringify({ error: "AI service unreachable" }), {
+  var result = await performVisaAICheck(env, passport, destination, purpose);
+  if (!result.ok) {
+    return new Response(JSON.stringify({ error: result.error, detail: result.detail, raw: result.raw }), {
       status: 502,
       headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
     });
-  }
-
-  if (!orResponse.ok) {
-    var errText = await orResponse.text();
-    return new Response(JSON.stringify({ error: "AI service error", detail: errText }), {
-      status: 502,
-      headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
-    });
-  }
-
-  var orData = await orResponse.json();
-  var rawContent = "";
-  try {
-    rawContent = orData.choices[0].message.content;
-  } catch (e) {
-    return new Response(JSON.stringify({ error: "Unexpected AI response shape" }), {
-      status: 502,
-      headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
-    });
-  }
-
-  var cleaned = rawContent.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-
-  var parsed;
-  try {
-    parsed = JSON.parse(cleaned);
-  } catch (e) {
-    try {
-      parsed = JSON.parse(cleaned.replace(/'/g, '"'));
-    } catch (e2) {
-      return new Response(JSON.stringify({ error: "Could not parse AI response", raw: rawContent }), {
-        status: 502,
-        headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
-      });
-    }
   }
 
   return new Response(JSON.stringify({
     ok: true,
-    data: parsed,
+    data: result.data,
     meta: { remaining: rateCheck.remaining, limit: accessLimit, plan: accessPlan }
   }), {
     status: 200,
@@ -555,6 +556,286 @@ async function handleVisaCheck(request, env) {
       "X-RateLimit-Remaining": String(rateCheck.remaining),
       "X-RateLimit-Reset": String(rateCheck.reset)
     }, CORS_HEADERS)
+  });
+}
+
+function isValidDateString(s) {
+  if (typeof s !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  var d = new Date(s + "T00:00:00Z");
+  return !isNaN(d.getTime());
+}
+
+function daysBetween(fromStr, toStr) {
+  var from = new Date(fromStr + "T00:00:00Z");
+  var to = new Date(toStr + "T00:00:00Z");
+  return Math.round((to.getTime() - from.getTime()) / 86400000);
+}
+
+function computeOrderingFlags(legs) {
+  var flags = [];
+  for (var i = 0; i < legs.length; i++) {
+    if (daysBetween(legs[i].arrival_date, legs[i].departure_date) < 0) {
+      flags.push({
+        type: "invalid_leg_dates", leg_index: i, severity: "issue",
+        message: "Leg " + (i + 1) + " (" + legs[i].destination + ") departure date is before its arrival date."
+      });
+    }
+  }
+  for (var j = 0; j < legs.length - 1; j++) {
+    var gapDays = daysBetween(legs[j].departure_date, legs[j + 1].arrival_date);
+    if (gapDays < 0) {
+      flags.push({
+        type: "overlap", leg_index: j + 1, severity: "issue",
+        message: "Leg " + (j + 2) + " (" + legs[j + 1].destination + ") starts " + (-gapDays) + " day(s) before Leg " + (j + 1) + " (" + legs[j].destination + ") ends."
+      });
+    } else if (gapDays === 0) {
+      flags.push({
+        type: "zero_day_gap", leg_index: j + 1, severity: "warning",
+        message: "No buffer day between leaving " + legs[j].destination + " and arriving in " + legs[j + 1].destination + " — same-day travel leaves no margin for delays."
+      });
+    }
+  }
+  return flags;
+}
+
+function computeLeadTime(leg, aiData, todayStr) {
+  if (!aiData) return { status: "not_checked" };
+  if (aiData.visa_required === false) {
+    return { status: "not_required", message: "No visa required for this leg." };
+  }
+
+  var daysUntilArrival = daysBetween(todayStr, leg.arrival_date);
+  var min = aiData.processing_days_min;
+  var max = aiData.processing_days_max;
+
+  if (min == null && max == null) {
+    return {
+      status: "unknown", days_until_arrival: daysUntilArrival,
+      message: "Processing time unavailable — verify manually with the embassy."
+    };
+  }
+
+  var effMin = min != null ? min : max;
+  var effMax = max != null ? max : min;
+
+  if (daysUntilArrival < 0) {
+    return {
+      status: "arrival_passed", severity: "issue", days_until_arrival: daysUntilArrival,
+      message: "This leg's arrival date is in the past."
+    };
+  }
+  if (daysUntilArrival < effMin) {
+    return {
+      status: "insufficient", severity: "issue", days_until_arrival: daysUntilArrival,
+      processing_days_min: min, processing_days_max: max,
+      message: "Only " + daysUntilArrival + " day(s) until arrival, but processing typically takes " + effMin + "–" + effMax + " days."
+    };
+  }
+  if (daysUntilArrival < effMax) {
+    return {
+      status: "tight", severity: "warning", days_until_arrival: daysUntilArrival,
+      processing_days_min: min, processing_days_max: max,
+      message: daysUntilArrival + " day(s) until arrival — within the " + effMin + "–" + effMax + "-day window, apply immediately."
+    };
+  }
+  return {
+    status: "ok", days_until_arrival: daysUntilArrival,
+    message: "Sufficient lead time (" + daysUntilArrival + " days) before arrival."
+  };
+}
+
+async function handleTripCheck(request, env) {
+  var body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return new Response(JSON.stringify({ error: "invalid_request", message: "Invalid request body" }), {
+      status: 400,
+      headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
+    });
+  }
+
+  var passport = body.passport;
+  var purpose = body.purpose || "tourism";
+  var legs = body.legs;
+  var subToken = body.sub_token;
+
+  if (!passport || typeof passport !== "string") {
+    return new Response(JSON.stringify({ error: "invalid_request", message: "passport is required" }), {
+      status: 400,
+      headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
+    });
+  }
+
+  if (!Array.isArray(legs) || legs.length < MIN_TRIP_LEGS || legs.length > MAX_TRIP_LEGS) {
+    return new Response(JSON.stringify({
+      error: "invalid_request",
+      message: "legs must be an array of " + MIN_TRIP_LEGS + " to " + MAX_TRIP_LEGS + " itinerary stops"
+    }), {
+      status: 400,
+      headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
+    });
+  }
+
+  for (var i = 0; i < legs.length; i++) {
+    var leg = legs[i];
+    if (!leg || typeof leg.destination !== "string" || !leg.destination) {
+      return new Response(JSON.stringify({ error: "invalid_request", message: "Leg " + (i + 1) + " is missing a destination" }), {
+        status: 400,
+        headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
+      });
+    }
+    if (!isValidDateString(leg.arrival_date) || !isValidDateString(leg.departure_date)) {
+      return new Response(JSON.stringify({ error: "invalid_request", message: "Leg " + (i + 1) + " has an invalid arrival_date or departure_date (expected YYYY-MM-DD)" }), {
+        status: 400,
+        headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
+      });
+    }
+  }
+
+  if (!subToken) {
+    return new Response(JSON.stringify({
+      error: "subscription_required",
+      message: "Multi-country trip analysis is a Traveller / Nomad Pro feature. Upgrade to check your full itinerary in one request."
+    }), {
+      status: 402,
+      headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
+    });
+  }
+
+  // Reserve one quota unit per leg, in itinerary order, stopping if the plan runs out mid-trip
+  var reservedIndexes = [];
+  var lastQuota = null;
+  var stoppedForQuota = false;
+
+  for (var r = 0; r < legs.length; r++) {
+    var subResult = await checkSubQuota(env, subToken);
+    if (!subResult || !subResult.valid) {
+      return new Response(JSON.stringify({
+        error: "invalid_subscription_token",
+        message: "This subscription token is not recognised. Please subscribe again or contact support."
+      }), {
+        status: 400,
+        headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
+      });
+    }
+    if (!subResult.active) {
+      return new Response(JSON.stringify({
+        error: "subscription_inactive",
+        message: "Your subscription is no longer active. Please resubscribe to continue."
+      }), {
+        status: 402,
+        headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
+      });
+    }
+    if (!subResult.allowed) {
+      if (r === 0) {
+        var subResetDate = new Date(subResult.reset * 1000).toUTCString();
+        return new Response(JSON.stringify({
+          error: "plan_limit_reached",
+          message: "You've used all " + subResult.cap + " checks in your plan this cycle. Resets at " + subResetDate + ".",
+          reset_at: subResult.reset
+        }), {
+          status: 429,
+          headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
+        });
+      }
+      stoppedForQuota = true;
+      break;
+    }
+    reservedIndexes.push(r);
+    lastQuota = subResult;
+  }
+
+  // Deterministic itinerary-ordering analysis, independent of AI/quota results
+  var itineraryFlags = computeOrderingFlags(legs);
+
+  // Run AI checks for reserved legs in parallel
+  var aiResults = await Promise.all(reservedIndexes.map(function (idx) {
+    return performVisaAICheck(env, passport, legs[idx].destination, purpose);
+  }));
+
+  var todayStr = new Date().toISOString().slice(0, 10);
+  var issueCount = 0;
+  var warningCount = 0;
+
+  itineraryFlags.forEach(function (f) {
+    if (f.severity === "issue") issueCount++;
+    else if (f.severity === "warning") warningCount++;
+  });
+
+  var legOutputs = legs.map(function (leg, idx) {
+    var reservedPos = reservedIndexes.indexOf(idx);
+    if (reservedPos === -1) {
+      return {
+        index: idx,
+        destination: leg.destination,
+        arrival_date: leg.arrival_date,
+        departure_date: leg.departure_date,
+        visa_check: null,
+        visa_check_error: "not_checked_quota_exhausted",
+        lead_time: { status: "not_checked" }
+      };
+    }
+
+    var result = aiResults[reservedPos];
+    if (!result.ok) {
+      return {
+        index: idx,
+        destination: leg.destination,
+        arrival_date: leg.arrival_date,
+        departure_date: leg.departure_date,
+        visa_check: null,
+        visa_check_error: result.error,
+        lead_time: { status: "not_checked" }
+      };
+    }
+
+    var leadTime = computeLeadTime(leg, result.data, todayStr);
+    if (leadTime.severity === "issue") issueCount++;
+    else if (leadTime.severity === "warning") warningCount++;
+
+    return {
+      index: idx,
+      destination: leg.destination,
+      arrival_date: leg.arrival_date,
+      departure_date: leg.departure_date,
+      visa_check: result.data,
+      visa_check_error: null,
+      lead_time: leadTime
+    };
+  });
+
+  legOutputs.forEach(function (leg) {
+    if (leg.visa_check_error) issueCount++;
+  });
+
+  var tripStatus = issueCount > 0 ? "issues" : (warningCount > 0 ? "warnings" : "clear");
+
+  var message = null;
+  if (stoppedForQuota && lastQuota) {
+    var resetDate = new Date(lastQuota.reset * 1000).toUTCString();
+    message = "Stopped after " + reservedIndexes.length + " of " + legs.length + " legs — you've used all " +
+      lastQuota.cap + " checks in your plan this cycle. Resets at " + resetDate + ".";
+  }
+
+  return new Response(JSON.stringify({
+    ok: true,
+    partial: stoppedForQuota,
+    legs: legOutputs,
+    itinerary_flags: itineraryFlags,
+    trip_summary: {
+      status: tripStatus,
+      legs_total: legs.length,
+      legs_checked: reservedIndexes.length,
+      issue_count: issueCount,
+      warning_count: warningCount
+    },
+    message: message,
+    meta: { remaining: lastQuota.remaining, limit: lastQuota.cap, plan: lastQuota.plan }
+  }), {
+    status: 200,
+    headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
   });
 }
 
@@ -568,6 +849,10 @@ export default {
 
     if (url.pathname === "/visa-check" && request.method === "POST") {
       return handleVisaCheck(request, env);
+    }
+
+    if (url.pathname === "/trip-check" && request.method === "POST") {
+      return handleTripCheck(request, env);
     }
 
     if (url.pathname === "/paypal/create-order" && request.method === "POST") {
