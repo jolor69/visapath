@@ -409,6 +409,8 @@ function populatePassportSelect() {
   var params = new URLSearchParams(window.location.search);
   var prePass = params.get("passport");
   if (prePass && COUNTRIES.indexOf(prePass) !== -1) pp.value = prePass;
+  var adminPin = params.get("admin_pin");
+  if (adminPin) window.__adminPin = adminPin;
 }
 
 var legIdCounter = 0;
@@ -750,6 +752,7 @@ function performTripCheck(passport, purpose, legs) {
   var sub = getStoredSub();
   var payload = { passport: passport, purpose: purpose, legs: legs };
   if (sub && sub.token) payload.sub_token = sub.token;
+  if (window.__adminPin) payload.admin_pin = window.__adminPin;
 
   return fetch(WORKER_URL + "/trip-check", {
     method: "POST",

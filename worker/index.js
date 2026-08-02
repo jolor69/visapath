@@ -11,6 +11,14 @@ const CORS_HEADERS = {
 var FREE_MONTHLY_LIMIT = 5;
 var WINDOW_SECONDS = 2592000; // 30 days
 
+// Admin testing PIN — grants unlimited queries, bypassing rate limits and subscription checks
+var ADMIN_PIN_FALLBACK = "visapath2026";
+function isAdminPin(env, pin) {
+  if (!pin) return false;
+  var expected = env.ADMIN_PIN || ADMIN_PIN_FALLBACK;
+  return pin === expected;
+}
+
 // PayPal config (sandbox)
 var PAYPAL_API_BASE = "https://api-m.sandbox.paypal.com";
 var PER_TRIP_PRICE_USD = "1.00";
@@ -514,9 +522,14 @@ async function handleVisaCheck(request, env) {
   var rateCheck;
   var accessPlan = "free";
   var accessLimit = FREE_MONTHLY_LIMIT;
-  var paidAccess = await redeemPaidToken(env, bodyForToken.paid_token);
+  var isAdmin = isAdminPin(env, bodyForToken.admin_pin);
+  var paidAccess = isAdmin ? null : await redeemPaidToken(env, bodyForToken.paid_token);
 
-  if (paidAccess) {
+  if (isAdmin) {
+    accessPlan = "admin";
+    accessLimit = 999999;
+    rateCheck = { allowed: true, remaining: 999999, reset: 0 };
+  } else if (paidAccess) {
     // One-off $2/trip unlock
     accessPlan = "per_trip";
     rateCheck = { allowed: true, remaining: 1, reset: 0 };
@@ -721,6 +734,7 @@ async function handleTripCheck(request, env) {
   var purpose = body.purpose || "tourism";
   var legs = body.legs;
   var subToken = body.sub_token;
+  var isAdmin = isAdminPin(env, body.admin_pin);
 
   if (!passport || typeof passport !== "string") {
     return new Response(JSON.stringify({ error: "invalid_request", message: "passport is required" }), {
@@ -755,7 +769,7 @@ async function handleTripCheck(request, env) {
     }
   }
 
-  if (!subToken) {
+  if (!subToken && !isAdmin) {
     return new Response(JSON.stringify({
       error: "subscription_required",
       message: "Multi-country trip analysis is a Traveller / Nomad Pro feature. Upgrade to check your full itinerary in one request."
@@ -771,6 +785,11 @@ async function handleTripCheck(request, env) {
   var stoppedForQuota = false;
 
   for (var r = 0; r < legs.length; r++) {
+    if (isAdmin) {
+      reservedIndexes.push(r);
+      lastQuota = { remaining: 999999, cap: 999999, plan: "admin" };
+      continue;
+    }
     var subResult = await checkSubQuota(env, subToken);
     if (!subResult || !subResult.valid) {
       return new Response(JSON.stringify({

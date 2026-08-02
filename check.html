@@ -535,6 +535,8 @@ function populateSelects() {
   var prePass = params.get("passport");
   if (preDest && COUNTRIES.indexOf(preDest) !== -1) dd.value = preDest;
   if (prePass && COUNTRIES.indexOf(prePass) !== -1) pp.value = prePass;
+  var adminPin = params.get("admin_pin");
+  if (adminPin) window.__adminPin = adminPin;
   checkSelects();
 }
 
@@ -805,6 +807,7 @@ function performCheck(passport, destination, purpose, paidToken) {
 
   var sub = getStoredSub();
   if (sub && sub.token) payload.sub_token = sub.token;
+  if (window.__adminPin) payload.admin_pin = window.__adminPin;
 
   return fetch(WORKER_URL + "/visa-check", {
     method: "POST",
