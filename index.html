@@ -126,6 +126,27 @@ nav{position:sticky;top:0;z-index:100;background:rgba(13,27,42,.96);border-botto
 .feat-link{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:var(--cyan);margin-top:16px;text-decoration:none;transition:gap .15s}
 .feat-link:hover{gap:8px}
 
+/* ── WHY RAG (TRUST SECTION) ── */
+.rag-section{background:var(--light);padding:96px 0}
+.rag-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:56px;align-items:center}
+.rag-copy-title{font-family:'Cormorant Garamond',serif;font-size:clamp(28px,3.4vw,40px);font-weight:700;color:var(--txt-dark);line-height:1.2;margin-bottom:18px}
+.rag-copy-desc{font-size:15px;color:var(--txt-mid);line-height:1.75;font-weight:300;margin-bottom:20px}
+.rag-points{list-style:none;display:flex;flex-direction:column;gap:14px}
+.rag-points li{display:flex;align-items:flex-start;gap:12px;font-size:14px;color:var(--txt-dark);line-height:1.6}
+.rag-point-check{width:22px;height:22px;border-radius:50%;background:rgba(16,185,129,.12);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;margin-top:1px}
+.rag-mockup{background:var(--white);border-radius:20px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.1);border:1px solid rgba(0,0,0,.06)}
+.rag-mockup-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.rag-mockup-route{font-size:14px;font-weight:600;color:var(--txt-dark)}
+.rag-mockup-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);color:#10B981;font-size:12px;font-weight:600;padding:5px 12px;border-radius:20px}
+.rag-mockup-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:5px 12px;border-radius:20px;background:rgba(16,185,129,.14);border:1px solid rgba(16,185,129,.35);color:#10B981;margin-bottom:16px}
+.rag-mockup-citation{border-top:1px solid #E2E8F0;padding-top:14px;margin-top:6px}
+.rag-mockup-citation-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--txt-muted);margin-bottom:8px}
+.rag-mockup-citation-row{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--txt-mid);line-height:1.5}
+.rag-mockup-tier{flex-shrink:0;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 7px;border-radius:4px;background:rgba(16,185,129,.14);color:#10B981}
+.rag-mockup-link{color:var(--cyan);word-break:break-word}
+.rag-mockup-date{color:var(--txt-muted);font-size:11px;display:block;margin-top:2px}
+.rag-disclaimer-note{font-size:12px;color:var(--txt-muted);margin-top:20px;line-height:1.6;font-weight:300}
+
 /* ── POPULAR ROUTES ── */
 .routes{background:var(--dark);padding:96px 0}
 .routes-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
@@ -141,6 +162,17 @@ nav{position:sticky;top:0;z-index:100;background:rgba(13,27,42,.96);border-botto
 .route-tag.e-visa{background:rgba(14,165,233,.15);color:var(--cyan)}
 .route-tag.required{background:rgba(239,68,68,.15);color:var(--red)}
 .routes-cta{text-align:center;margin-top:40px}
+
+/* ── WANDR CROSS-PROMO ── */
+.wandr-banner{background:linear-gradient(135deg,#0EA5E9 0%,#10B981 100%);padding:56px 0}
+.wandr-inner{display:flex;align-items:center;gap:32px;flex-wrap:wrap}
+.wandr-icon{font-size:44px;flex-shrink:0;background:rgba(255,255,255,.18);width:88px;height:88px;border-radius:20px;display:flex;align-items:center;justify-content:center}
+.wandr-content{flex:1;min-width:240px}
+.wandr-tag{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.85);margin-bottom:8px}
+.wandr-title{font-family:'Cormorant Garamond',serif;font-size:clamp(24px,3vw,32px);font-weight:700;color:#fff;margin-bottom:8px;line-height:1.2}
+.wandr-desc{font-size:15px;color:rgba(255,255,255,.88);font-weight:300;line-height:1.6;max-width:520px}
+.btn-wandr{flex-shrink:0;display:inline-flex;align-items:center;gap:8px;background:#fff;color:#0D1B2A;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;padding:15px 28px;border-radius:40px;text-decoration:none;white-space:nowrap;transition:transform .15s,box-shadow .15s}
+.btn-wandr:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.2)}
 
 /* ── TESTIMONIALS ── */
 .testi{background:var(--light);padding:96px 0}
@@ -242,6 +274,10 @@ footer{background:var(--dark);border-top:1px solid var(--border-d);padding:64px 
   .footer-grid{grid-template-columns:1fr 1fr}
 }
 @media(max-width:768px){
+  .rag-grid{grid-template-columns:1fr;gap:36px}
+  .wandr-inner{flex-direction:column;text-align:center}
+  .wandr-desc{max-width:100%}
+  .btn-wandr{width:100%;justify-content:center;box-sizing:border-box}
   .hero-inner{flex-direction:column;gap:32px}
   .hero-right{width:100%;max-width:100%;padding:0;overflow:hidden}
   .hero-img-wrap{aspect-ratio:16/9;overflow:hidden;width:100%;max-width:100%}
@@ -480,6 +516,42 @@ footer{background:var(--dark);border-top:1px solid var(--border-d);padding:64px 
   </div>
 </section>
 
+<!-- WHY RAG (TRUST SECTION) -->
+<section class="rag-section" id="why-verified">
+  <div class="container">
+    <div class="rag-grid">
+      <div>
+        <div class="eyebrow-wrap" style="justify-content:flex-start">
+          <div class="eyebrow-line"></div>
+          <div class="eyebrow-txt">Why Trust VisaPath</div>
+        </div>
+        <div class="rag-copy-title">Most AI travel tools guess.<br>VisaPath checks.</div>
+        <div class="rag-copy-desc">A generic chatbot answers visa questions from memory — and that memory can be wrong or months out of date. VisaPath instead pulls the actual current rule text from a real, dated source before it answers, and shows you exactly where that answer came from.</div>
+        <ul class="rag-points">
+          <li><span class="rag-point-check">✓</span><span>Every answer is backed by a real, sourced document — not just the AI's memory.</span></li>
+          <li><span class="rag-point-check">✓</span><span>See the source tier and the date it was last verified, right on your result.</span></li>
+          <li><span class="rag-point-check">✓</span><span>If we don't have a current, dated source for your route, we tell you — instead of quietly guessing.</span></li>
+        </ul>
+        <div class="rag-disclaimer-note">VisaPath provides informational guidance based on official government sources and third-party travel data providers — not legal or immigration advice. Visa requirements can change without notice. Always confirm final details with the relevant embassy, consulate, or official government source before booking or traveling.</div>
+      </div>
+      <div class="rag-mockup">
+        <div class="rag-mockup-head">
+          <div class="rag-mockup-route">United Kingdom → South Africa</div>
+          <div class="rag-mockup-pill">● Visa Free</div>
+        </div>
+        <div class="rag-mockup-badge">✓ Official source · verified 2026-08-02</div>
+        <div class="rag-mockup-citation">
+          <div class="rag-mockup-citation-label">Sources Used For This Answer</div>
+          <div class="rag-mockup-citation-row">
+            <span class="rag-mockup-tier">Official</span>
+            <span><span class="rag-mockup-link">www.dha.gov.za/immigration-services/types-of-visas</span><span class="rag-mockup-date">Verified 2026-08-02</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- POPULAR ROUTES -->
 <section class="routes" id="routes">
   <div class="container">
@@ -566,6 +638,21 @@ footer{background:var(--dark);border-top:1px solid var(--border-d);padding:64px 
     </div>
     <div class="routes-cta">
       <a href="./check.html" class="btn-outline">⊕ Check All 195 Countries</a>
+    </div>
+  </div>
+</section>
+
+<!-- WANDR CROSS-PROMO -->
+<section class="wandr-banner" id="wandr">
+  <div class="container">
+    <div class="wandr-inner">
+      <div class="wandr-icon">🗺️</div>
+      <div class="wandr-content">
+        <div class="wandr-tag">From the NeuLab family</div>
+        <div class="wandr-title">Visa sorted? Now plan the trip itself.</div>
+        <div class="wandr-desc">Wandr turns your travel dates into a day-by-day itinerary — flights, stays, and things to do, organised automatically. Built by the same team behind VisaPath.</div>
+      </div>
+      <a href="https://wandr.neulab.xyz" target="_blank" class="btn-wandr">Plan My Itinerary on Wandr →</a>
     </div>
   </div>
 </section>
@@ -780,7 +867,7 @@ footer{background:var(--dark);border-top:1px solid var(--border-d);padding:64px 
     </div>
     <div class="footer-bottom">
       <div class="footer-copy">© 2025 <a href="https://neulab.xyz" target="_blank">NeuLab Inc.</a> · All rights reserved.</div>
-      <div class="footer-disclaimer">AI-assisted guidance only. Always verify visa requirements with the official embassy or consulate before travel. NeuLab accepts no liability for denied entry or boarding.</div>
+      <div class="footer-disclaimer">VisaPath provides informational guidance based on official government sources and third-party travel data providers — not legal or immigration advice. Always confirm final details with the relevant embassy, consulate, or official government source before booking or traveling.</div>
     </div>
   </div>
 </footer>

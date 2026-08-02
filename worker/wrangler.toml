@@ -1,6 +1,7 @@
 name = "visapath-worker"
 main = "index.js"
 compatibility_date = "2024-01-01"
+account_id = "90b6bd4e010caa9a9c45a34f4cd178ff"
 
 [vars]
 ENVIRONMENT = "production"
@@ -8,6 +9,22 @@ ENVIRONMENT = "production"
 [[kv_namespaces]]
 binding = "VISAPATH_KV"
 id = "3ba04cf600d34d5ca00bcf6a7361b766"
+
+[[d1_databases]]
+binding = "RULES_DB"
+database_name = "visapath-rules-db"
+database_id = "64730de6-403d-4ad6-9d32-7a3468401a39"
+
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "visapath-rules"
+
+[[r2_buckets]]
+binding = "RAW_SOURCES"
+bucket_name = "visapath-raw-sources"
+
+[triggers]
+crons = ["0 3 * * 1"]
 
 # Set secrets via:
 # wrangler secret put OPENROUTER_API_KEY

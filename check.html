@@ -182,6 +182,12 @@ select option { background: #1a2e42; color: var(--white); }
 .result-quota .rq-num { color: var(--cyan); font-weight: 700; }
 .result-quota.low { color: #F59E0B; background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.35); }
 .result-quota.low .rq-num { color: #F59E0B; }
+
+/* GROUNDING / SOURCE-TIER BADGE */
+.grounding-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 20px; white-space: nowrap; }
+.grounding-badge.official { background: rgba(16,185,129,0.14); border: 1px solid rgba(16,185,129,0.35); color: #10B981; }
+.grounding-badge.aggregator { background: rgba(245,158,11,0.14); border: 1px solid rgba(245,158,11,0.35); color: #F59E0B; }
+.grounding-badge.ungrounded { background: rgba(148,163,184,0.14); border: 1px solid rgba(148,163,184,0.3); color: #94A3B8; }
 .conf-row { display: flex; align-items: center; gap: 8px; margin-top: 20px; }
 .conf-bar-wrap { flex: 1; max-width: 160px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
 .conf-bar { height: 100%; border-radius: 2px; }
@@ -239,6 +245,16 @@ select option { background: #1a2e42; color: var(--white); }
 .ext-link-search:hover { border-color: var(--cyan); color: var(--cyan); border-style: dashed; }
 .ext-link-search { border-style: dashed; color: var(--muted); }
 .ext-link-search:hover { border-color: var(--cyan); color: var(--cyan); }
+
+/* CITATIONS */
+.citation-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.citation-list li { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: var(--mid-txt); line-height: 1.55; }
+.citation-tier { flex-shrink: 0; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 3px 8px; border-radius: 4px; margin-top: 1px; }
+.citation-tier.official { background: rgba(16,185,129,0.14); color: #10B981; }
+.citation-tier.aggregator { background: rgba(245,158,11,0.14); color: #F59E0B; }
+.citation-link { color: var(--cyan); text-decoration: none; word-break: break-word; }
+.citation-link:hover { text-decoration: underline; }
+.citation-date { color: var(--muted); font-size: 12px; }
 
 /* DISCLAIMER */
 .disclaimer {
@@ -570,6 +586,37 @@ function statEntry(d) {
   return { val: "See visa terms", cls: "", sub: "Depends on visa type" };
 }
 
+function buildGroundingBadgeHtml(d) {
+  if (!d.grounded || !d.citations || !d.citations.length) {
+    return "<div class='grounding-badge ungrounded'>Not source-verified</div>";
+  }
+  var hasOfficial = false;
+  for (var i = 0; i < d.citations.length; i++) {
+    if (d.citations[i].source_tier === "official") hasOfficial = true;
+  }
+  var tierCls = hasOfficial ? "official" : "aggregator";
+  var tierLabel = hasOfficial ? "Official source" : "Third-party source";
+  var latestDate = d.citations[0] && d.citations[0].last_verified_date ? d.citations[0].last_verified_date : "";
+  return "<div class='grounding-badge " + tierCls + "'>✓ " + tierLabel + (latestDate ? " · verified " + latestDate : "") + "</div>";
+}
+
+function buildCitationsHtml(d) {
+  if (!d.citations || !d.citations.length) return "";
+  var rows = "";
+  for (var i = 0; i < d.citations.length; i++) {
+    var c = d.citations[i];
+    var tierCls = c.source_tier === "official" ? "official" : "aggregator";
+    rows += "<li>" +
+      "<span class='citation-tier " + tierCls + "'>" + (c.source_tier || "source") + "</span>" +
+      "<span><a href='" + c.source_url + "' target='_blank' rel='noopener' class='citation-link'>" + c.source_url + "</a>" +
+      (c.last_verified_date ? " <span class='citation-date'>· verified " + c.last_verified_date + "</span>" : "") +
+      "</span></li>";
+  }
+  return "<div class='section-card'>" +
+    "<div class='section-head'><div class='section-icon'>🔗</div><div class='section-title'>Sources Used For This Answer</div></div>" +
+    "<ul class='citation-list'>" + rows + "</ul></div>";
+}
+
 function buildQuotaHtml(meta) {
   if (!meta || typeof meta.remaining !== "number" || typeof meta.limit !== "number") return "";
   if (meta.plan === "per_trip") return "";
@@ -585,6 +632,14 @@ function renderResult(d, passport, destination, purpose, meta) {
   var confCls = d.confidence || "medium";
   var confLabels = { high: "High confidence", medium: "Medium confidence", low: "Low confidence — verify carefully" };
   var quotaHtml = buildQuotaHtml(meta);
+  var groundingBadgeHtml = buildGroundingBadgeHtml(d);
+  var citationsHtml = buildCitationsHtml(d);
+  var hasAggregatorCitation = false;
+  if (d.citations) {
+    for (var ci = 0; ci < d.citations.length; ci++) {
+      if (d.citations[ci].source_tier === "aggregator") hasAggregatorCitation = true;
+    }
+  }
 
   var docsHtml = "";
   if (d.documents_required && d.documents_required.length) {
@@ -643,6 +698,7 @@ function renderResult(d, passport, destination, purpose, meta) {
           "</div>" +
           "<div class='result-status-col'>" +
             "<div class='status-pill " + sc.cls + "'><span class='status-dot'></span>" + sc.label + "</div>" +
+            groundingBadgeHtml +
             quotaHtml +
           "</div>" +
         "</div>" +
@@ -665,11 +721,12 @@ function renderResult(d, passport, destination, purpose, meta) {
           "<div class='stat-card'><div class='stat-icon'>🔁</div><div class='stat-val " + entry.cls + "'>" + entry.val + "</div><div class='stat-lbl'>Entry Type</div><div class='stat-sub'>" + entry.sub + "</div></div>" +
         "</div>" +
 
-        docsHtml + notesHtml + linksHtml +
+        docsHtml + notesHtml + citationsHtml + linksHtml +
 
-        "<div class='disclaimer'><strong>Important:</strong> This is AI-assisted guidance based on publicly available information" +
-          (d.last_known_update ? " (last known update: " + d.last_known_update + ")" : "") +
-          ". Visa policies change without notice. Always verify with the official embassy or consulate before booking. NeuLab accepts no liability for denied entry or boarding.</div>" +
+        "<div class='disclaimer'><strong>Important:</strong> VisaPath provides informational guidance based on official government sources and third-party travel data providers — not legal or immigration advice. Visa requirements can change without notice. Always confirm final details with the relevant embassy, consulate, or official government source before booking or traveling." +
+          (hasAggregatorCitation ? " This destination's information comes from a third-party travel data source rather than an official government source — treat it as a starting point, not a final answer." : "") +
+          (d.last_known_update ? " (Model's last known update: " + d.last_known_update + ".)" : "") +
+          "</div>" +
 
         "<button class='new-search-btn' id='newSearchBtn'>← Check Another Route</button>" +
 
