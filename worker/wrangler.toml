@@ -23,8 +23,21 @@ index_name = "visapath-rules"
 binding = "RAW_SOURCES"
 bucket_name = "visapath-raw-sources"
 
+# Document Readiness Checker — separate DB/bucket from RAG reference data since this is
+# user PII with its own retention/access rules. IDs below are PLACEHOLDERS — run
+# `wrangler d1 create visapath-app-db` and `wrangler r2 bucket create visapath-user-documents`
+# (under the correct account — see deploy note) and fill in database_id before deploying.
+[[d1_databases]]
+binding = "APP_DB"
+database_name = "visapath-app-db"
+database_id = "0a1715ec-7a85-49a6-9b1d-1c81fca7e45b"
+
+[[r2_buckets]]
+binding = "USER_DOCUMENTS"
+bucket_name = "visapath-user-documents"
+
 [triggers]
-crons = ["0 3 * * 1"]
+crons = ["0 3 * * 1", "0 4 * * *"]
 
 # Set secrets via:
 # wrangler secret put OPENROUTER_API_KEY

@@ -1,10 +1,14 @@
-import { runIngestion, embedTexts } from "./ingest.js";
-import { resolveCountryCode } from "./countries.js";
+import { runIngestion } from "./ingest.js";
+import { performVisaAICheck } from "./visaCheck.js";
+import { handleRequestLink, handleVerify, requireAuth } from "./auth.js";
+import { handleCreateTrip, handleListTrips, handleGetTrip, handlePatchTrip, handleDeleteTrip, handleAddTraveler, handlePatchTraveler } from "./trips.js";
+import { handleUploadDocument, handleGetDocument, handlePatchDocumentFields, handleDeleteDocument } from "./documents.js";
+import { handlePatchIssue } from "./readiness.js";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type"
+  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization"
 };
 
 // Rate limit config
@@ -33,10 +37,6 @@ var PLAN_CONFIG = {
 // Multi-country trip analysis (Traveller / Nomad Pro only)
 var MIN_TRIP_LEGS = 2;
 var MAX_TRIP_LEGS = 8;
-
-var SYSTEM_PROMPT = "You are VisaPath, a visa requirements data API. You MUST respond with raw JSON only. No markdown. No backticks. No explanation. No preamble. Your entire response must be a single valid JSON object that can be passed directly to JSON.parse().\n\nCRITICAL URL RULES:\n- official_url: Must be the REAL, LIVE official government page for visa info. Use well-known domains only: canada.ca, gov.uk, homeaffairs.gov.au, mfa.gov.sg, mofa.go.jp, mfa.gov.cn, state.gov, etc. NEVER use subdomains like canadainternational.gc.ca or missions.gc.ca as they are often retired. When in doubt about a URL, set it to null rather than guessing.\n- embassy_url: Must be the REAL, LIVE embassy or consulate website in the passport holder's country. Use the main embassy domain. If unsure, set to null.\n- NEVER fabricate or guess URLs. A null URL is better than a dead link.\n\nKNOWN CORRECT URLS (always use these):\n- Canada visa info: https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada.html\n- UK visa info: https://www.gov.uk/check-uk-visa\n- Australia visa info: https://immi.homeaffairs.gov.au\n- USA visa info: https://travel.state.gov/content/travel/en/us-visas.html\n- Japan visa info: https://www.mofa.go.jp/j_info/visit/visa/index.html\n- Singapore MFA: https://www.mfa.gov.sg\n- Schengen/EU: https://home-affairs.ec.europa.eu/policies/schengen-borders-and-visa_en\n\nRespond ONLY with this exact JSON structure:\n{\n  \"visa_required\": true | false | \"visa_on_arrival\" | \"e_visa\" | \"unknown\",\n  \"visa_type\": \"string or null\",\n  \"max_stay_days\": number or null,\n  \"cost_usd\": number or null,\n  \"cost_local\": \"string or null\",\n  \"processing_days_min\": number or null,\n  \"processing_days_max\": number or null,\n  \"entry_type\": \"single\" | \"multiple\" | \"varies\" | null,\n  \"validity_days\": number or null,\n  \"documents_required\": [\"array of strings\"],\n  \"special_notes\": [\"array of important notes, warnings, or conditions\"],\n  \"official_url\": \"string or null\",\n  \"embassy_url\": \"string or null\",\n  \"last_known_update\": \"string\",\n  \"confidence\": \"high\" | \"medium\" | \"low\",\n  \"summary\": \"2-3 sentence plain English summary\",\n  \"citations\": []\n}";
-
-var GROUNDED_PROMPT_PREFIX = "You are answering with RETRIEVED SOURCE CHUNKS below, not from memory. Rules:\n1. Base every factual claim (visa type, stay duration, cost, documents, processing time) ONLY on the chunks provided.\n2. If the chunks do not cover something, set that field to null and note the gap in special_notes rather than filling it from your own knowledge.\n3. Set \"citations\" to an array of objects, one per chunk actually used: {\"source_url\": string, \"source_tier\": string, \"last_verified_date\": string}.\n4. If none of the chunks are relevant to the question, say so in summary and return citations: [].\n\nRETRIEVED SOURCE CHUNKS:\n";
 
 function getClientIP(request) {
   return request.headers.get("CF-Connecting-IP") ||
@@ -396,117 +396,6 @@ async function checkSubQuota(env, subToken) {
     plan: record.plan, cap: record.cap, remaining: record.cap - record.used,
     reset: record.cycle_start + WINDOW_SECONDS
   };
-}
-
-async function retrieveGroundingChunks(env, destination, purpose) {
-  var countryCode = resolveCountryCode(destination);
-  if (!countryCode || !env.VECTORIZE || !env.RULES_DB) return { countryCode: countryCode, chunks: [] };
-
-  var queryText = "Visa requirements for " + destination + ", purpose: " + purpose;
-  var queryVector;
-  try {
-    var vectors = await embedTexts(env, [queryText]);
-    queryVector = vectors[0];
-  } catch (e) {
-    return { countryCode: countryCode, chunks: [] };
-  }
-
-  var matches;
-  try {
-    var result = await env.VECTORIZE.query(queryVector, { topK: 6, filter: { country_code: countryCode } });
-    matches = result.matches || [];
-  } catch (e) {
-    return { countryCode: countryCode, chunks: [] };
-  }
-
-  if (matches.length === 0) return { countryCode: countryCode, chunks: [] };
-
-  var vectorIds = matches.map(function (m) { return m.id; });
-  var placeholders = vectorIds.map(function () { return "?"; }).join(",");
-  var rows;
-  try {
-    var stmt = env.RULES_DB.prepare(
-      "SELECT chunk_text, source_url, source_tier, last_verified_date FROM rule_chunks WHERE vector_id IN (" + placeholders + ")"
-    );
-    var boundStmt = stmt.bind.apply(stmt, vectorIds);
-    var d1Res = await boundStmt.all();
-    rows = d1Res.results || [];
-  } catch (e) {
-    return { countryCode: countryCode, chunks: [] };
-  }
-
-  return { countryCode: countryCode, chunks: rows };
-}
-
-function buildGroundedPrompt(chunks) {
-  var lines = [];
-  for (var i = 0; i < chunks.length; i++) {
-    var c = chunks[i];
-    lines.push("[" + (i + 1) + "] (source: " + c.source_url + ", tier: " + c.source_tier + ", verified: " + c.last_verified_date + ")\n" + c.chunk_text);
-  }
-  return GROUNDED_PROMPT_PREFIX + lines.join("\n\n");
-}
-
-async function performVisaAICheck(env, passport, destination, purpose) {
-  var grounding = await retrieveGroundingChunks(env, destination, purpose);
-  var groundedPromptBlock = grounding.chunks.length > 0 ? buildGroundedPrompt(grounding.chunks) + "\n\n" : "";
-
-  var userPrompt = groundedPromptBlock + "Passport: " + passport + "\nDestination: " + destination + "\nPurpose: " + purpose + "\n\nProvide current visa requirements for this combination. IMPORTANT: Respond with raw JSON only. No markdown, no backticks, no explanation — just the JSON object.";
-
-  var payload = {
-    model: "deepseek/deepseek-chat",
-    max_tokens: 1500,
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: userPrompt }
-    ]
-  };
-
-  var orResponse;
-  try {
-    orResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer " + env.OPENROUTER_API_KEY,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://visapath.neulab.xyz",
-        "X-Title": "VisaPath by NeuLab"
-      },
-      body: JSON.stringify(payload)
-    });
-  } catch (e) {
-    return { ok: false, error: "AI service unreachable" };
-  }
-
-  if (!orResponse.ok) {
-    var errText = await orResponse.text();
-    return { ok: false, error: "AI service error", detail: errText };
-  }
-
-  var orData = await orResponse.json();
-  var rawContent = "";
-  try {
-    rawContent = orData.choices[0].message.content;
-  } catch (e) {
-    return { ok: false, error: "Unexpected AI response shape" };
-  }
-
-  var cleaned = rawContent.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-
-  var parsed = null;
-  try {
-    parsed = JSON.parse(cleaned);
-  } catch (e) {
-    try {
-      parsed = JSON.parse(cleaned.replace(/'/g, '"'));
-    } catch (e2) {
-      return { ok: false, error: "Could not parse AI response", raw: rawContent };
-    }
-  }
-
-  if (!Array.isArray(parsed.citations)) parsed.citations = [];
-  parsed.grounded = grounding.chunks.length > 0;
-  return { ok: true, data: parsed };
 }
 
 async function handleVisaCheck(request, env) {
@@ -964,6 +853,23 @@ async function handleAdminIngest(request, env) {
   });
 }
 
+// Daily sweep: delete document images (and their D1 rows) past their delete_after date.
+// Structured fields are intentionally left behind — they're the useful part for the
+// user's document history, and carry far less exposure than the original scanned image.
+async function cleanupExpiredDocuments(env) {
+  var nowIso = new Date().toISOString();
+  var expired = (await env.APP_DB.prepare("SELECT id, r2_key FROM documents WHERE delete_after < ? AND r2_key != 'deleted'").bind(nowIso).all()).results || [];
+
+  for (var i = 0; i < expired.length; i++) {
+    try {
+      await env.USER_DOCUMENTS.delete(expired[i].r2_key);
+    } catch (e) {
+      continue; // leave the D1 row for the next sweep to retry rather than losing track of it
+    }
+    await env.APP_DB.prepare("UPDATE documents SET r2_key = 'deleted' WHERE id = ?").bind(expired[i].id).run();
+  }
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") {
@@ -1010,6 +916,69 @@ export default {
       });
     }
 
+    // --- Document Readiness Checker routes ---
+
+    if (url.pathname === "/auth/request-link" && request.method === "POST") {
+      return handleRequestLink(request, env, CORS_HEADERS);
+    }
+    if (url.pathname === "/auth/verify" && request.method === "POST") {
+      return handleVerify(request, env, CORS_HEADERS);
+    }
+
+    var tripMatch = url.pathname.match(/^\/trips\/([^/]+)$/);
+    var tripTravelersMatch = url.pathname.match(/^\/trips\/([^/]+)\/travelers$/);
+    var tripDocumentsMatch = url.pathname.match(/^\/trips\/([^/]+)\/documents$/);
+    var travelerMatch = url.pathname.match(/^\/travelers\/([^/]+)$/);
+    var documentMatch = url.pathname.match(/^\/documents\/([^/]+)$/);
+    var documentFieldsMatch = url.pathname.match(/^\/documents\/([^/]+)\/fields$/);
+    var issueMatch = url.pathname.match(/^\/issues\/([^/]+)$/);
+
+    var needsAuth = url.pathname === "/trips" || tripMatch || tripTravelersMatch || tripDocumentsMatch ||
+      travelerMatch || documentMatch || documentFieldsMatch || issueMatch;
+
+    if (needsAuth) {
+      var user = await requireAuth(request, env);
+      if (!user) {
+        return new Response(JSON.stringify({ error: "unauthorized", message: "Sign in required" }), {
+          status: 401,
+          headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
+        });
+      }
+
+      if (url.pathname === "/trips" && request.method === "POST") return handleCreateTrip(request, env, user, CORS_HEADERS);
+      if (url.pathname === "/trips" && request.method === "GET") return handleListTrips(request, env, user, CORS_HEADERS);
+
+      if (tripMatch && request.method === "GET") return handleGetTrip(tripMatch[1], env, user, CORS_HEADERS);
+      if (tripMatch && request.method === "PATCH") return handlePatchTrip(tripMatch[1], request, env, user, CORS_HEADERS);
+      if (tripMatch && request.method === "DELETE") return handleDeleteTrip(tripMatch[1], env, user, CORS_HEADERS);
+
+      if (tripTravelersMatch && request.method === "POST") return handleAddTraveler(tripTravelersMatch[1], request, env, user, CORS_HEADERS);
+      if (travelerMatch && request.method === "PATCH") return handlePatchTraveler(travelerMatch[1], request, env, user, CORS_HEADERS);
+
+      if (tripDocumentsMatch && request.method === "POST") {
+        // Free-tier gate on document scans, mirroring the existing IP-based free limit
+        // but keyed per authenticated user (documents require accounts unlike /visa-check).
+        var scanRateCheck = await checkRateLimit(env, "user:" + user.id);
+        if (!scanRateCheck.allowed) {
+          var resetDate = new Date(scanRateCheck.reset * 1000).toUTCString();
+          return new Response(JSON.stringify({
+            error: "rate_limited",
+            message: "You have reached the free limit of " + FREE_MONTHLY_LIMIT + " document scans per month. Limit resets at " + resetDate + "."
+          }), {
+            status: 429,
+            headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
+          });
+        }
+        return handleUploadDocument(tripDocumentsMatch[1], request, env, user, CORS_HEADERS);
+      }
+
+      if (documentMatch && request.method === "GET") return handleGetDocument(documentMatch[1], env, user, CORS_HEADERS);
+      if (documentMatch && request.method === "DELETE") return handleDeleteDocument(documentMatch[1], env, user, CORS_HEADERS);
+      if (documentFieldsMatch && request.method === "PATCH") return handlePatchDocumentFields(documentFieldsMatch[1], request, env, user, CORS_HEADERS);
+
+      if (issueMatch && request.method === "PATCH") return handlePatchIssue(issueMatch[1], request, env, user, CORS_HEADERS);
+    }
+
     return new Response(JSON.stringify({ error: "Not found" }), {
       status: 404,
       headers: Object.assign({ "Content-Type": "application/json" }, CORS_HEADERS)
@@ -1017,6 +986,10 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runIngestion(env));
+    if (event.cron === "0 4 * * *") {
+      ctx.waitUntil(cleanupExpiredDocuments(env));
+    } else {
+      ctx.waitUntil(runIngestion(env));
+    }
   }
 };
