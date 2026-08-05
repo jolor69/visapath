@@ -52,12 +52,23 @@ nav{position:sticky;top:0;z-index:100;background:rgba(13,27,42,.96);border-botto
 .nav-brand{display:flex;align-items:center;gap:10px;text-decoration:none}
 .nav-logo{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .nav-name{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--white);letter-spacing:.02em}
-.nav-links{display:flex;align-items:center;gap:32px}
-.nav-links a{font-size:14px;font-weight:500;color:rgba(255,255,255,.65);text-decoration:none;transition:color .15s}
+.nav-links{display:flex;align-items:center;gap:22px}
+.nav-links a{font-size:13px;font-weight:500;color:rgba(255,255,255,.65);text-decoration:none;transition:color .15s;white-space:nowrap}
 .nav-links a:hover{color:var(--white)}
 .nav-cta{display:flex;align-items:center;gap:16px}
 .nav-tag{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);background:rgba(14,165,233,.1);border:1px solid rgba(14,165,233,.25);padding:4px 12px;border-radius:20px}
 .nav-neulab{font-size:12px;color:var(--txt-muted)}
+.nav-hamburger{display:none;flex-direction:column;justify-content:center;align-items:center;gap:5px;width:36px;height:36px;background:transparent;border:none;cursor:pointer;padding:0;flex-shrink:0}
+.nav-hamburger span{display:block;width:22px;height:2px;background:var(--white);border-radius:2px;transition:transform .2s,opacity .2s}
+.nav-hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.nav-hamburger.open span:nth-child(2){opacity:0}
+.nav-hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.nav-mobile-panel{display:none;flex-direction:column;background:rgba(13,27,42,.98);border-top:1px solid var(--border-d);backdrop-filter:blur(14px);max-height:0;overflow:hidden;transition:max-height .25s ease}
+.nav-mobile-panel.open{display:flex;max-height:80vh;overflow-y:auto}
+.nav-mobile-panel a{padding:16px 24px;font-size:15px;font-weight:500;color:rgba(255,255,255,.75);text-decoration:none;border-bottom:1px solid var(--border-d)}
+.nav-mobile-panel a:last-child{border-bottom:none}
+.nav-mobile-panel a:active{color:var(--white)}
+.nav-mobile-cta{margin:16px 24px !important;text-align:center;justify-content:center;padding:14px 22px !important;border-bottom:none !important}
 
 /* ── HERO ── */
 .hero{background:linear-gradient(160deg,#0D1B2A 0%,#112B44 60%,#0D1B2A 100%);min-height:100vh;display:flex;align-items:center;padding:100px 0 80px;position:relative;overflow-x:hidden}
@@ -295,6 +306,7 @@ footer{background:var(--dark);border-top:1px solid var(--border-d);padding:64px 
   .footer-disclaimer{text-align:left}
   .nav-links{display:none}
   .nav-tag{display:none}
+  .nav-hamburger{display:flex}
   .how,.features,.routes,.testi,.pricing,.faq,.cta-banner{padding:64px 0}
 }
 @media(max-width:480px){
@@ -351,12 +363,26 @@ footer{background:var(--dark);border-top:1px solid var(--border-d);padding:64px 
         <a href="#pricing">Pricing</a>
         <a href="#faq">FAQ</a>
         <a href="./documents.html">Document Readiness</a>
+        <a href="./technology.html">Technology &amp; RAG</a>
       </div>
       <div class="nav-cta">
         <span class="nav-tag">AI-Powered</span>
         <a href="./check.html" class="btn-primary" style="padding:10px 22px;font-size:14px;">Check Visa →</a>
       </div>
+      <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false" aria-controls="navMobilePanel">
+        <span></span><span></span><span></span>
+      </button>
     </div>
+  </div>
+  <div class="nav-mobile-panel" id="navMobilePanel">
+    <a href="#how">How It Works</a>
+    <a href="#features">Features</a>
+    <a href="#routes">Countries</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+    <a href="./documents.html">Document Readiness</a>
+    <a href="./technology.html">Technology &amp; RAG</a>
+    <a href="./check.html" class="btn-primary nav-mobile-cta">Check Visa →</a>
   </div>
 </nav>
 
@@ -843,6 +869,18 @@ footer{background:var(--dark);border-top:1px solid var(--border-d);padding:64px 
         <button class="faq-q">Is VisaPath affiliated with any government or embassy? <span class="faq-icon">+</span></button>
         <div class="faq-a">No. VisaPath is an independent AI-powered tool built by NeuLab Inc. We are not affiliated with any government, embassy, or visa service provider. All information is sourced from publicly available official government websites and presented for informational purposes only.</div>
       </div>
+      <div class="faq-item">
+        <button class="faq-q">What is the Document Readiness checker, and how does it work? <span class="faq-icon">+</span></button>
+        <div class="faq-a">Knowing the visa rule isn't the same as being ready to travel. <a href="./documents.html" style="color:var(--cyan)">Document Readiness</a> lets you photograph your passport, visa, health certificate, and ID, then checks them against your actual trip dates — passport expiry vs. travel dates, name consistency across documents, visa validity windows, and scan quality — and flags anything that needs attention with a readiness score.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Does the document scan use AI to read my passport or visa? <span class="faq-icon">+</span></button>
+        <div class="faq-a">Yes — a vision-capable AI model reads each photo directly (no manual data entry), classifying the document type, checking image quality, and extracting fields like name, passport number, and expiry date in one pass. It's instructed never to guess a field it can't clearly read: an unreadable field is left blank for you to fill in rather than silently invented. See the <a href="./technology.html" style="color:var(--cyan)">technical breakdown</a> for the full pipeline.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Is my uploaded document data safe, and how long do you keep it? <span class="faq-icon">+</span></button>
+        <div class="faq-a">Document Readiness requires a quick email sign-in (unlike the free visa checker, which needs none) so your scans are tied only to your account. Uploaded images are stored securely and automatically deleted 30 days after your trip's end date — you can also delete any document yourself at any time. Document Readiness is free to use.</div>
+      </div>
     </div>
   </div>
 </section>
@@ -915,6 +953,23 @@ footer{background:var(--dark);border-top:1px solid var(--border-d);padding:64px 
 <button class="scroll-top" id="scrollTop">↑</button>
 
 <script>
+/* Mobile nav hamburger */
+var navHamburger = document.getElementById("navHamburger");
+var navMobilePanel = document.getElementById("navMobilePanel");
+navHamburger.addEventListener("click", function() {
+  var isOpen = navMobilePanel.classList.toggle("open");
+  navHamburger.classList.toggle("open", isOpen);
+  navHamburger.setAttribute("aria-expanded", isOpen ? "true" : "false");
+});
+var navMobileLinks = navMobilePanel.querySelectorAll("a");
+for (var m = 0; m < navMobileLinks.length; m++) {
+  navMobileLinks[m].addEventListener("click", function() {
+    navMobilePanel.classList.remove("open");
+    navHamburger.classList.remove("open");
+    navHamburger.setAttribute("aria-expanded", "false");
+  });
+}
+
 /* FAQ accordion */
 var faqItems = document.querySelectorAll(".faq-item");
 for (var i = 0; i < faqItems.length; i++) {

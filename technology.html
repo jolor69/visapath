@@ -216,6 +216,46 @@ footer a{color:var(--cyan);text-decoration:none}
 
 <section class="section alt">
   <div class="container">
+    <div class="eyebrow"><div class="eyebrow-line"></div><div class="eyebrow-txt">Pipeline 2 — Document Readiness</div></div>
+    <div class="section-title">Vision-LLM extraction, not a form users fill in by hand.</div>
+    <div class="section-desc">The Document Readiness checker doesn't ask travellers to type in their passport number or expiry date — they photograph the document and a vision-capable model reads it. Classification, image-quality assessment, and structured field extraction happen in one call, then a separate rules engine checks the extracted fields against the trip dates and against each other.</div>
+
+    <div class="flow">
+      <div class="flow-step"><div class="flow-step-num">01</div><div class="flow-step-title">Upload</div><div class="flow-step-desc">User photographs a passport, visa, health cert, or ID (JPEG/PNG/WEBP/HEIC) and uploads it for a trip.</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="flow-step-num">02</div><div class="flow-step-title">Store raw</div><div class="flow-step-desc">Original image bytes written to R2 before any processing, so the source scan is preserved for audit or re-extraction.</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="flow-step-num">03</div><div class="flow-step-title">Classify + OCR</div><div class="flow-step-desc">Image sent as a base64 data URL to a vision-LLM call via OpenRouter: document type, image quality, and every legible field extracted in one pass.</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="flow-step-num">04</div><div class="flow-step-title">Persist</div><div class="flow-step-desc">document_type, quality_status, model_used, and per-field values stored in D1 against the traveler's document record.</div></div>
+    </div>
+    <div class="flow">
+      <div class="flow-step"><div class="flow-step-num">05</div><div class="flow-step-title">Cross-check</div><div class="flow-step-desc">Rules engine compares extracted fields across documents and against trip dates: visa required but missing, visa validity window vs. travel dates, likely health-cert requirement.</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="flow-step-num">06</div><div class="flow-step-title">Quality flags</div><div class="flow-step-desc">Any scan the model marked blurry, glared, cropped, low-res, or unreadable is surfaced as a warning instead of silently extracting a guessed value.</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="flow-step-num">07</div><div class="flow-step-title">Score</div><div class="flow-step-desc">Issues roll up into a readiness score: critical issues (e.g. missing visa) cap the score low, warnings (e.g. blurry scan) cap it moderately.</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-title">Model choice</div>
+    <div class="section-desc">Primary: <strong>google/gemini-2.5-flash</strong>, called via OpenRouter — chosen for OCR accuracy-per-dollar on dense printed text like passport MRZ lines and visa stickers. Fallback: <strong>google/gemini-2.5-flash-lite</strong> if the primary call fails. The model is explicitly instructed not to guess or fabricate a field it can't actually read from the image — an unreadable field is left blank for the user to fill in manually, not silently invented.</div>
+    <div class="stack-grid">
+      <div class="stack-card"><div class="stack-card-name">OpenRouter</div><div class="stack-card-role">Single API for the vision-LLM call: image + prompt in, document_type + quality_status + extracted fields out as structured JSON.</div></div>
+      <div class="stack-card"><div class="stack-card-name">Gemini 2.5 Flash</div><div class="stack-card-role">Primary OCR/classification model — best accuracy-per-dollar on dense printed document text.</div></div>
+      <div class="stack-card"><div class="stack-card-name">Gemini 2.5 Flash-Lite</div><div class="stack-card-role">Automatic fallback if the primary model call errors, so an extraction failure doesn't block the user.</div></div>
+      <div class="stack-card"><div class="stack-card-name">R2</div><div class="stack-card-role">Stores the original uploaded document image, separate from the raw-source archive used by the RAG pipeline.</div></div>
+      <div class="stack-card"><div class="stack-card-name">D1</div><div class="stack-card-role">documents and extracted-fields tables, plus the readiness issues generated per trip.</div></div>
+      <div class="stack-card"><div class="stack-card-name">No fabricated fields</div><div class="stack-card-role">Prompt instructs the model to leave a field empty rather than guess — a missed field is safer than a wrong one.</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section alt">
+  <div class="container">
     <div class="cta-box">
       <div class="cta-title">See it live, or talk architecture</div>
       <div class="cta-desc">Run a real check against a grounded country, or reach out if you're evaluating this for a partnership, integration, or data-source collaboration.</div>
